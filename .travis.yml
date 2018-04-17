@@ -1,0 +1,5 @@
+language: java
+jdk: openjdk8
+before_install:
+- "./src/main/scripts/ci/before-install.sh"
+- "./src/main/scripts/cd/before-deploy.sh"
