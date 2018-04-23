@@ -145,7 +145,7 @@ public class Microservices {
         .services(services)
         .codecs(this.codecs.get("application/json"))
         .build();
-    
+
     if (services != null && services.length > 0) {
       server.accept(localServices);
       InetSocketAddress inet = server.bindAwait(new InetSocketAddress(Addressing.getLocalIpAddress(), 0));
@@ -174,7 +174,11 @@ public class Microservices {
     return this.metrics;
   }
 
-  public Collection<ServiceEndpoint> services() {
+  public Collection<Object> services() {
+    return localServices.services();
+  }
+
+  public Collection<ServiceEndpoint> serviceEndpoints() {
     return serviceRegistry.listServiceEndpoints();
   }
 
@@ -200,9 +204,9 @@ public class Microservices {
      * @return Microservices instance.
      */
     public Microservices build() {
-      // return Reflect.builder(
-      return new Microservices(this.server, this.client, clusterConfig, services, codecs, this.metrics);
-      // .inject();
+      return Reflect
+          .builder(new Microservices(this.server, this.client, clusterConfig, services, codecs, this.metrics))
+          .inject();
     }
 
     public Builder server(ServerTransport server) {
