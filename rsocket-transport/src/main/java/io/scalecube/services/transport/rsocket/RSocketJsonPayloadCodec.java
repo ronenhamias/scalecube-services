@@ -112,8 +112,7 @@ public class RSocketJsonPayloadCodec implements MessageCodec, ServiceMessageCode
   @Override
   public ServiceMessage decodeData(ServiceMessage message, Class type) {
     if (message.data() != null && message.data() instanceof ByteBuf) {
-      ByteBufInputStream inputStream = new ByteBufInputStream(message.data());
-      try {
+      try (ByteBufInputStream inputStream = new ByteBufInputStream(message.data(), true)) {
         return ServiceMessage.from(message).data(readFrom(inputStream, type)).build();
       } catch (Throwable ex) {
         LOGGER.error("Failed to deserialize data", ex);
