@@ -106,6 +106,10 @@ public class RSocketJsonPayloadCodec implements MessageCodec, ServiceMessageCode
       }
     }
 
+    payload.release();
+
+    System.out.println("### decodeMessage: " + payload.refCnt());
+
     return builder.build();
   }
 
