@@ -22,7 +22,7 @@ import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 import io.rsocket.Payload;
-import io.rsocket.util.DefaultPayload;
+import io.rsocket.util.ByteBufPayload;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +83,7 @@ public class RSocketJsonPayloadCodec implements MessageCodec, ServiceMessageCode
       }
     }
 
-    return DefaultPayload.create(dataBuffer.nioBuffer(), headersBuffer.nioBuffer());
+    return ByteBufPayload.create(dataBuffer, headersBuffer);
   }
 
   @Override
@@ -107,8 +107,6 @@ public class RSocketJsonPayloadCodec implements MessageCodec, ServiceMessageCode
     }
 
     payload.release();
-
-    System.out.println("### decodeMessage: " + payload.refCnt());
 
     return builder.build();
   }
