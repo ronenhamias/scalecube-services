@@ -90,7 +90,7 @@ public class TestStreamingService extends BaseTest {
 
   @Test
   public void test_quotes_batch() throws InterruptedException {
-    int streamBound = 1_000_000;
+    int streamBound = (int) 1e6;
     
     //FIXME: set to 1M message to get this:
     //FIXME: E 0423-2116:11,400 i.n.u.ResourceLeakDetector LEAK: ByteBuf.release() was not called before it's garbage-collected. See http://netty.io/wiki/reference-counted-objects.html for more information.
