@@ -99,8 +99,7 @@ public class RSocketJsonPayloadCodec implements MessageCodec, ServiceMessageCode
     }
 
     if (payload.hasMetadata()) {
-      ByteBuf headers = payload.sliceMetadata();
-      ByteBufInputStream inputStream = new ByteBufInputStream(headers);
+      ByteBufInputStream inputStream = new ByteBufInputStream(payload.sliceMetadata(), true);
       try {
         builder.headers(readFrom(inputStream, mapType));
       } catch (Throwable ex) {
