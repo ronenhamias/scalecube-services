@@ -90,7 +90,7 @@ public class TestStreamingService extends BaseTest {
 
   @Test
   public void test_quotes_batch() throws InterruptedException {
-    int streamBound = (int) 1e6;
+    int streamBound = 1000;
     
     Microservices gateway = Microservices.builder().build();
     Microservices node = Microservices.builder()
