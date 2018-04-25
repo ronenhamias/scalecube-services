@@ -1,11 +1,11 @@
 package io.scalecube.services.transport;
 
 import io.scalecube.services.Reflect;
+import io.scalecube.services.api.ServiceMessage;
 import io.scalecube.services.transport.api.CommunicationMode;
 import io.scalecube.services.transport.api.ServiceMethodDispatcher;
 import io.scalecube.services.transport.dispatchers.FireAndForgetInvoker;
 import io.scalecube.services.transport.dispatchers.RequestChannelDispatcher;
-import io.scalecube.services.transport.dispatchers.RequestResponseDispatcher;
 import io.scalecube.services.transport.dispatchers.RequestStreamDispatcher;
 
 import org.reactivestreams.Publisher;
@@ -80,9 +80,6 @@ public class LocalServiceDispatchers {
     return Collections.unmodifiableCollection(this.services);
   }
 
-  public List<? extends ServiceMessageDataCodec> codecs() {
-    return this.codecs;
-  }
 
   public Publisher dispatchLocalService(ServiceMessage request) {
     // noinspection unchecked

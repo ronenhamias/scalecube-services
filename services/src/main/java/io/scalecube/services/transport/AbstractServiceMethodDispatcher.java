@@ -3,10 +3,13 @@ package io.scalecube.services.transport;
 import io.scalecube.services.Reflect;
 import io.scalecube.services.api.ServiceMessage;
 import io.scalecube.services.transport.api.ServiceMethodDispatcher;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Method;
 
-public abstract class AbstractServiceMethodDispatcher<REQ, RESP> implements ServiceMethodDispatcher<REQ> {
+public abstract class AbstractServiceMethodDispatcher<REQ> implements ServiceMethodDispatcher<REQ> {
 
   protected final Method method;
   protected final Object serviceObject;
@@ -33,5 +36,4 @@ public abstract class AbstractServiceMethodDispatcher<REQ, RESP> implements Serv
             .data(obj)
             .build();
   }
-
 }
