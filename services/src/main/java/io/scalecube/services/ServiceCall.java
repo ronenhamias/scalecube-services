@@ -2,7 +2,7 @@ package io.scalecube.services;
 
 import io.scalecube.services.api.ErrorData;
 import io.scalecube.services.api.ServiceMessage;
-import io.scalecube.services.codecs.api.ServiceMessageDataCodec;
+import io.scalecube.services.codecs.api.ServiceMessageCodec;
 import io.scalecube.services.exceptions.ExceptionProcessor;
 import io.scalecube.services.metrics.Metrics;
 import io.scalecube.services.routing.Router;
@@ -10,6 +10,7 @@ import io.scalecube.services.transport.LocalServiceDispatchers;
 import io.scalecube.services.transport.client.api.ClientTransport;
 import io.scalecube.transport.Address;
 
+import com.codahale.metrics.Timer;
 import com.google.common.reflect.Reflection;
 
 import org.reactivestreams.Publisher;
@@ -41,13 +42,14 @@ public class ServiceCall {
 
     private Router router;
     private Metrics metrics;
+    private Timer latency;
     private ClientTransport transport;
-    private ServiceMessageDataCodec codec;
+    private ServiceMessageCodec codec;
     private LocalServiceDispatchers localServices;
 
     public Call(ClientTransport transport, LocalServiceDispatchers localServices) {
       this.transport = transport;
-      this.codec = transport.getServiceMessageDataCodec();
+      this.codec = transport.getMessageCodec();
       this.localServices = localServices;
     }
 
@@ -58,6 +60,7 @@ public class ServiceCall {
 
     public Call metrics(Metrics metrics) {
       this.metrics = metrics;
+      this.latency = Metrics.timer(this.metrics, ServiceCall.class.getName(), "invoke");
       return this;
     }
 
@@ -86,47 +89,45 @@ public class ServiceCall {
      */
     public Publisher<ServiceMessage> requestOne(final ServiceMessage request, final Class<?> returnType) {
       Messages.validate().serviceRequest(request);
-      if (localServices.contains(request.qualifier())) {
-        return localServices.dispatchLocalService(request);
+      String qualifier = request.qualifier();
+      if (localServices.contains(qualifier)) {
+        return localServices.getDispatcher(qualifier).invoke((request));
       } else {
-        return requestResponseRemote(request, returnType, router.route(request).orElseThrow(() -> noReachableMemberException(request)));
+        ServiceReference serviceReference =
+            router.route(request).orElseThrow(() -> noReachableMemberException(request));
+
+        Address address =
+            Address.create(serviceReference.host(), serviceReference.port());
+
+        // FIXME: in request response its not good idea to create transport for address per call.
+        // better to reuse same channel.
+        return transport.create(address)
+            .requestResponse(request)
+            .map(message -> {
+              if (ExceptionProcessor.isError(message)) {
+                throw ExceptionProcessor.toException(codec.decodeData(message, ErrorData.class));
+              } else {
+                return codec.decodeData(message, returnType);
+              }
+            });
       }
     }
 
-
     /**
-     * Invoke a request message and invoke a service by a given service name and method name. expected headers in
-     * request:ServiceHeaders.SERVICE_REQUEST the logical name of the service. ServiceHeaders.METHOD the method name to
+     * Issues fire-and-rorget request.
      *
-     * @param request request with given headers.
-     * @param serviceReference target instance to invoke.
-     * @return Mono with service call dispatching result.
+     * @param request request to send.
+     * @return Mono of type Void.
      */
-    private Publisher<ServiceMessage> requestResponseRemote(final ServiceMessage request, final Class<?> returnType,
-                                                            final ServiceReference serviceReference) {
-      // FIXME: in request response its not good idea to create transport for address per call.
-      // better to reuse same channel.
-      Address address = Address.create(serviceReference.host(), serviceReference.port());
-      return transport.create(address).requestResponse(request)
-          .map(message -> {
-            if (ExceptionProcessor.isError(message)) {
-              throw ExceptionProcessor.toException(codec.decodeData(message, ErrorData.class));
-            } else {
-              return codec.decodeData(message, returnType);
-            }
-          });
-    }
-
     public Mono<Void> oneWay(ServiceMessage request) {
-      ServiceReference serviceReference = router.route(request).orElseThrow(() -> noReachableMemberException(request));
-      return fireAndForgetRemote(request, serviceReference);
-    }
+      ServiceReference serviceReference =
+          router.route(request).orElseThrow(() -> noReachableMemberException(request));
 
-    private Mono<Void> fireAndForgetRemote(ServiceMessage request, final ServiceReference serviceReference) {
-      Address address = Address.create(serviceReference.host(), serviceReference.port());
+      Address address =
+          Address.create(serviceReference.host(), serviceReference.port());
+
       return transport.create(address).fireAndForget(request);
     }
-
 
     /**
      * sending subscription request message to a service that returns Observable.
@@ -136,21 +137,23 @@ public class ServiceCall {
      */
     public Publisher<ServiceMessage> requestMany(ServiceMessage request) {
       Messages.validate().serviceRequest(request);
-      if (localServices.contains(request.qualifier())) {
-        return localServices.dispatchLocalService(request);
+      String qualifier = request.qualifier();
+      if (localServices.contains(qualifier)) {
+        return localServices.getDispatcher(qualifier).invoke(request);
       } else {
-        Class responseType = request.responseType() != null ? request.responseType() : Object.class;
+        Class responseType =
+            request.responseType() != null ? request.responseType() : Object.class;
+
         ServiceReference serviceReference =
             router.route(request).orElseThrow(() -> noReachableMemberException(request));
-        return this.requestStreamRemote(request, serviceReference, responseType);
-      }
-    }
 
-    private Publisher<ServiceMessage> requestStreamRemote(ServiceMessage request, ServiceReference serviceReference,
-                                                         Class responseType) {
-      Address address = Address.create(serviceReference.host(), serviceReference.port());
-      return transport.create(address).requestStream(request)
-          .map(message -> codec.decodeData(message, responseType));
+        Address address =
+            Address.create(serviceReference.host(), serviceReference.port());
+
+        return transport.create(address)
+            .requestStream(request)
+            .map(message -> codec.decodeData(message, responseType));
+      }
     }
 
     /**
