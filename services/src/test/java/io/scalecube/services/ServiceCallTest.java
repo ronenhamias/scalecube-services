@@ -16,7 +16,6 @@ import io.scalecube.services.ServiceCall.Call;
 import io.scalecube.services.a.b.testing.CanaryService;
 import io.scalecube.services.a.b.testing.CanaryTestingRouter;
 import io.scalecube.services.api.ServiceMessage;
-import io.scalecube.services.exceptions.ServiceException;
 import io.scalecube.services.routing.RoundRobinServiceRouter;
 import io.scalecube.services.routing.Router;
 import io.scalecube.testlib.BaseTest;
@@ -229,7 +228,7 @@ public class ServiceCallTest extends BaseTest {
           Assert.fail("Should have received an error");
         }, result::complete);
 
-    ServiceException error = (ServiceException) result.get(TIMEOUT, TimeUnit.SECONDS);
+    IllegalArgumentException error = (IllegalArgumentException) result.get(TIMEOUT, TimeUnit.SECONDS);
     Assert.assertEquals("Error message doesn't match", "joe", error.getMessage());
     node.shutdown().block();
   }

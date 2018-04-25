@@ -2,7 +2,6 @@ package io.scalecube.services;
 
 import io.scalecube.services.api.ErrorData;
 import io.scalecube.services.api.ServiceMessage;
-import io.scalecube.services.codecs.api.ServiceMessageDataCodec;
 import io.scalecube.services.exceptions.ExceptionProcessor;
 import io.scalecube.services.metrics.Metrics;
 import io.scalecube.services.routing.Router;
@@ -42,13 +41,13 @@ public class ServiceCall {
     private Router router;
     private Metrics metrics;
     private ClientTransport transport;
-    private ServiceMessageDataCodec codec;
+    private ServiceMessageCodec codec;
     private LocalServiceDispatchers localServices;
 
     public Call(ClientTransport transport, LocalServiceDispatchers localServices) {
       this.transport = transport;
-      this.codec = transport.getServiceMessageDataCodec();
-      this.localServices = localServices;
+      this.codec = transport.getMessageCodec();
+      this.localServices = Optional.ofNullable(localServices);
     }
 
     public Call router(Router router) {
