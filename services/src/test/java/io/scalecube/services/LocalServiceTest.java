@@ -152,7 +152,7 @@ public class LocalServiceTest extends BaseTest {
   @Test
   public void test_local_greeting_request_timeout_expires() throws Exception {
     thrown.expect(RuntimeException.class);
-    thrown.expectMessage("Did not observe any item or terminal signal within 3000ms");
+    thrown.expectMessage("Did not observe any item or terminal signal");
 
     // Create microservices instance.
     Microservices node1 = Microservices.builder()
@@ -165,7 +165,7 @@ public class LocalServiceTest extends BaseTest {
     // call the service.
 
     Mono.from(service.greetingRequestTimeout(new GreetingRequest("joe", timeout)))
-        .timeout(timeout)
+        .timeout(Duration.ofSeconds(1))
         .block();
 
     node1.shutdown().block();
