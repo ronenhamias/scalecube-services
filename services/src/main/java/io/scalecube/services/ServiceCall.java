@@ -78,20 +78,13 @@ public class ServiceCall {
       return requestOne(request, responseType);
     }
 
-    /**
-     * Invoke a request message and invoke a service by a given service name and method name. expected headers in *
-     * request: ServiceHeaders.SERVICE_REQUEST the logical name of the service. ServiceHeaders.METHOD the method name to
-     * invoke message uses the router to select the target endpoint service instance in the cluster. Throws Exception
-     * in* case of an error or TimeoutException if no response if a given duration.
-     *
-     * @param request request with given headers.
-     * @return CompletableFuture with service call dispatching result.
-     */
     public Publisher<ServiceMessage> requestOne(final ServiceMessage request, final Class<?> returnType) {
       Messages.validate().serviceRequest(request);
       String qualifier = request.qualifier();
       if (localServices.contains(qualifier)) {
-        return localServices.getDispatcher(qualifier).invoke((request));
+        // noinspection unchecked
+        return ((Mono<ServiceMessage>) Mono.from(localServices.getDispatcher(qualifier).invoke((request))))
+            .onErrorMap(ExceptionProcessor::mapException);
       } else {
         ServiceReference serviceReference =
             router.route(request).orElseThrow(() -> noReachableMemberException(request));
@@ -139,7 +132,9 @@ public class ServiceCall {
       Messages.validate().serviceRequest(request);
       String qualifier = request.qualifier();
       if (localServices.contains(qualifier)) {
-        return localServices.getDispatcher(qualifier).invoke(request);
+        // noinspection unchecked
+        return ((Flux<ServiceMessage>) Flux.from(localServices.getDispatcher(qualifier).invoke((request))))
+            .onErrorMap(ExceptionProcessor::mapException);
       } else {
         Class responseType =
             request.responseType() != null ? request.responseType() : Object.class;
@@ -152,7 +147,13 @@ public class ServiceCall {
 
         return transport.create(address)
             .requestStream(request)
-            .map(message -> codec.decodeData(message, responseType));
+            .map(message -> {
+              if (ExceptionProcessor.isError(message)) {
+                throw ExceptionProcessor.toException(codec.decodeData(message, ErrorData.class));
+              } else {
+                return codec.decodeData(message, responseType);
+              }
+            });
       }
     }
 

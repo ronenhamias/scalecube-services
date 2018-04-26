@@ -47,4 +47,8 @@ public class ExceptionProcessor {
         return new ServiceException(errorCode, errorMessage);
     }
   }
+
+  public static Throwable mapException(Throwable throwable) {
+    return new ServiceException(ServiceException.ERROR_TYPE, throwable.getMessage());
+  }
 }
