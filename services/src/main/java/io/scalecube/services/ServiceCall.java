@@ -195,7 +195,7 @@ public class ServiceCall {
             .build();
 
 
-        if (returnType.isAssignableFrom(Mono.class) && Void.TYPE.equals(parameterizedReturnType)) {
+        if (returnType.isAssignableFrom(Mono.class) && parameterizedReturnType.isAssignableFrom(Void.class)) {
           return serviceCall.oneWay(reqMsg);
 
         } else if (returnType.isAssignableFrom(Mono.class)) {
