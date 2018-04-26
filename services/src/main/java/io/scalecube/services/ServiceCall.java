@@ -1,8 +1,9 @@
 package io.scalecube.services;
 
+import io.scalecube.services.api.ErrorData;
 import io.scalecube.services.api.ServiceMessage;
-import io.scalecube.services.codecs.api.MessageCodec;
-import io.scalecube.services.codecs.api.ServiceMessageDataCodec;
+import io.scalecube.services.codecs.api.ServiceMessageCodec;
+import io.scalecube.services.exceptions.ExceptionProcessor;
 import io.scalecube.services.metrics.Metrics;
 import io.scalecube.services.routing.Router;
 import io.scalecube.services.transport.LocalServiceDispatchers;
@@ -18,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.util.Optional;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -44,13 +44,13 @@ public class ServiceCall {
     private Metrics metrics;
     private Timer latency;
     private ClientTransport transport;
-    private ServiceMessageDataCodec codec;
-    private Optional<LocalServiceDispatchers> localServices;
+    private ServiceMessageCodec codec;
+    private LocalServiceDispatchers localServices;
 
     public Call(ClientTransport transport, LocalServiceDispatchers localServices) {
       this.transport = transport;
-      this.codec = transport.getServiceMessageDataCodec();
-      this.localServices = Optional.ofNullable(localServices);
+      this.codec = transport.getMessageCodec();
+      this.localServices = localServices;
     }
 
     public Call router(Router router) {
@@ -89,43 +89,45 @@ public class ServiceCall {
      */
     public Publisher<ServiceMessage> requestOne(final ServiceMessage request, final Class<?> returnType) {
       Messages.validate().serviceRequest(request);
-      if (localServices.get().contains(request.qualifier())) {
-        return localServices.get().dispatchLocalService(request.qualifier(), request);
+      String qualifier = request.qualifier();
+      if (localServices.contains(qualifier)) {
+        return localServices.getDispatcher(qualifier).invoke((request));
       } else {
-        return requestOne(request, returnType,
-            router.route(request).orElseThrow(() -> noReachableMemberException(request)));
+        ServiceReference serviceReference =
+            router.route(request).orElseThrow(() -> noReachableMemberException(request));
+
+        Address address =
+            Address.create(serviceReference.host(), serviceReference.port());
+
+        // FIXME: in request response its not good idea to create transport for address per call.
+        // better to reuse same channel.
+        return transport.create(address)
+            .requestResponse(request)
+            .map(message -> {
+              if (ExceptionProcessor.isError(message)) {
+                throw ExceptionProcessor.toException(codec.decodeData(message, ErrorData.class));
+              } else {
+                return codec.decodeData(message, returnType);
+              }
+            });
       }
     }
 
-
     /**
-     * Invoke a request message and invoke a service by a given service name and method name. expected headers in
-     * request:ServiceHeaders.SERVICE_REQUEST the logical name of the service. ServiceHeaders.METHOD the method name to
+     * Issues fire-and-rorget request.
      *
-     * @param request request with given headers.
-     * @param serviceReference target instance to invoke.
-     * @return Mono with service call dispatching result.
-     * @throws Exception in case of an error or TimeoutException if no response if a given duration.
+     * @param request request to send.
+     * @return Mono of type Void.
      */
-    public Publisher<ServiceMessage> requestOne(final ServiceMessage request, final Class<?> returnType,
-        final ServiceReference serviceReference) {
-      // FIXME: in request response its not good idea to create transport for address per call.
-      // better to reuse same channel.
-      Address address = Address.create(serviceReference.host(), serviceReference.port());
-      return transport.create(address).requestResponse(request)
-          .map(message -> codec.decodeData(message, returnType));
-    }
-
     public Mono<Void> oneWay(ServiceMessage request) {
-      ServiceReference serviceReference = router.route(request).orElseThrow(() -> noReachableMemberException(request));
-      return oneWay(request, serviceReference);
-    }
+      ServiceReference serviceReference =
+          router.route(request).orElseThrow(() -> noReachableMemberException(request));
 
-    public Mono<Void> oneWay(ServiceMessage request, final ServiceReference serviceReference) {
-      Address address = Address.create(serviceReference.host(), serviceReference.port());
+      Address address =
+          Address.create(serviceReference.host(), serviceReference.port());
+
       return transport.create(address).fireAndForget(request);
     }
-
 
     /**
      * sending subscription request message to a service that returns Observable.
@@ -135,21 +137,23 @@ public class ServiceCall {
      */
     public Publisher<ServiceMessage> requestMany(ServiceMessage request) {
       Messages.validate().serviceRequest(request);
-      if (localServices.get().contains(request.qualifier())) {
-        return localServices.get().dispatchLocalService(request.qualifier(), request);
+      String qualifier = request.qualifier();
+      if (localServices.contains(qualifier)) {
+        return localServices.getDispatcher(qualifier).invoke(request);
       } else {
-        Class responseType = request.responseType() != null ? request.responseType() : Object.class;
+        Class responseType =
+            request.responseType() != null ? request.responseType() : Object.class;
+
         ServiceReference serviceReference =
             router.route(request).orElseThrow(() -> noReachableMemberException(request));
-        return this.requestMany(request, serviceReference, responseType);
-      }
-    }
 
-    public Publisher<ServiceMessage> requestMany(ServiceMessage request, ServiceReference serviceReference,
-        Class responseType) {
-      Address address = Address.create(serviceReference.host(), serviceReference.port());
-      return transport.create(address).requestStream(request)
-          .map(message -> codec.decodeData(message, responseType));
+        Address address =
+            Address.create(serviceReference.host(), serviceReference.port());
+
+        return transport.create(address)
+            .requestStream(request)
+            .map(message -> codec.decodeData(message, responseType));
+      }
     }
 
     /**
@@ -225,7 +229,5 @@ public class ServiceCall {
         return null;
       }
     }
-
-
   }
 }
