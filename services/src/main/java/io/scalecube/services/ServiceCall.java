@@ -205,14 +205,14 @@ public class ServiceCall {
               .transform(mono -> parameterizedReturnType.equals(ServiceMessage.class) ? mono
                   : mono.map(ServiceMessage::data));
 
-        } else if (returnType.equals(Flux.class)) {
+        } else if (returnType.isAssignableFrom(Flux.class)) {
           // noinspection unchecked
           return Flux.from(serviceCall.requestMany(reqMsg))
               .map(message -> codec.decodeData(message, parameterizedReturnType))
               .transform(flux -> parameterizedReturnType.equals(ServiceMessage.class) ? flux
                   : flux.map(ServiceMessage::data));
 
-        } else if (returnType.equals(Void.TYPE)) {
+        } else if (returnType.isAssignableFrom(Void.class) || returnType.equals(Void.TYPE)) {
           serviceCall.oneWay(reqMsg);
           return null;
 
