@@ -224,9 +224,7 @@ public class ServiceCall {
     }
 
     private IllegalStateException noReachableMemberException(ServiceMessage request) {
-
-      LOGGER.error(
-          "Failed  to invoke service, No reachable member with such service definition [{}], args [{}]",
+      LOGGER.error("Failed  to invoke service, No reachable member with such service definition [{}], args [{}]",
           request.qualifier(), request);
       return new IllegalStateException("No reachable member with such service: " + request.qualifier());
     }
