@@ -7,6 +7,7 @@ import io.scalecube.services.exceptions.ExceptionProcessor;
 import io.scalecube.services.metrics.Metrics;
 import io.scalecube.services.routing.Router;
 import io.scalecube.services.transport.LocalServiceDispatchers;
+import io.scalecube.services.transport.api.ServiceMethodDispatcher;
 import io.scalecube.services.transport.client.api.ClientTransport;
 import io.scalecube.transport.Address;
 
@@ -16,9 +17,6 @@ import com.google.common.reflect.Reflection;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -78,12 +76,14 @@ public class ServiceCall {
       return requestOne(request, responseType);
     }
 
+    @SuppressWarnings("unchecked")
     public Publisher<ServiceMessage> requestOne(final ServiceMessage request, final Class<?> returnType) {
       Messages.validate().serviceRequest(request);
       String qualifier = request.qualifier();
+
       if (localServices.contains(qualifier)) {
-        // noinspection unchecked
-        return ((Mono<ServiceMessage>) Mono.from(localServices.getDispatcher(qualifier).invoke((request))))
+        ServiceMethodDispatcher dispatcher = localServices.getDispatcher(qualifier);
+        return ((Mono<ServiceMessage>) Mono.from(dispatcher.invoke((request))))
             .onErrorMap(ExceptionProcessor::mapException);
       } else {
         ServiceReference serviceReference =
@@ -112,14 +112,24 @@ public class ServiceCall {
      * @param request request to send.
      * @return Mono of type Void.
      */
+    @SuppressWarnings("unchecked")
     public Mono<Void> oneWay(ServiceMessage request) {
-      ServiceReference serviceReference =
-          router.route(request).orElseThrow(() -> noReachableMemberException(request));
+      Messages.validate().serviceRequest(request);
+      String qualifier = request.qualifier();
 
-      Address address =
-          Address.create(serviceReference.host(), serviceReference.port());
+      if (localServices.contains(qualifier)) {
+        ServiceMethodDispatcher dispatcher = localServices.getDispatcher(qualifier);
+        return ((Mono<Void>) Mono.from(dispatcher.invoke((request))))
+            .onErrorMap(ExceptionProcessor::mapException);
+      } else {
+        ServiceReference serviceReference =
+            router.route(request).orElseThrow(() -> noReachableMemberException(request));
 
-      return transport.create(address).fireAndForget(request);
+        Address address =
+            Address.create(serviceReference.host(), serviceReference.port());
+
+        return transport.create(address).fireAndForget(request);
+      }
     }
 
     /**
@@ -128,12 +138,14 @@ public class ServiceCall {
      * @param request containing subscription data.
      * @return rx.Observable for the specific stream.
      */
+    @SuppressWarnings("unchecked")
     public Publisher<ServiceMessage> requestMany(ServiceMessage request) {
       Messages.validate().serviceRequest(request);
       String qualifier = request.qualifier();
+
       if (localServices.contains(qualifier)) {
-        // noinspection unchecked
-        return ((Flux<ServiceMessage>) Flux.from(localServices.getDispatcher(qualifier).invoke((request))))
+        ServiceMethodDispatcher dispatcher = localServices.getDispatcher(qualifier);
+        return ((Flux<ServiceMessage>) Flux.from(dispatcher.invoke((request))))
             .onErrorMap(ExceptionProcessor::mapException);
       } else {
         Class responseType =
@@ -167,46 +179,46 @@ public class ServiceCall {
 
       final Call serviceCall = this;
 
-      return Reflection.newProxy(serviceInterface, new InvocationHandler() {
-        @Override
-        public Object invoke(Object proxy, Method method, Object[] args) {
+      return Reflection.newProxy(serviceInterface, (proxy, method, args) -> {
 
-          Object check = objectToStringEqualsHashCode(method.getName(), serviceInterface, args);
-          if (check != null) {
-            return check; // toString, hashCode was invoked.
-          }
-          Metrics.mark(serviceInterface, metrics, method, "request");
-          Class<?> parameterizedReturnType = Reflect.parameterizedReturnType(method);
-          Class<?> returnType = method.getReturnType();
-          final ServiceMessage reqMsg = ServiceMessage.builder()
-              .qualifier(Reflect.serviceName(serviceInterface), method.getName())
-              .data(method.getParameterCount() != 0 ? args[0] : null)
-              .build();
+        Object check = objectToStringEqualsHashCode(method.getName(), serviceInterface, args);
+        if (check != null) {
+          return check; // toString, hashCode was invoked.
+        }
+
+        Metrics.mark(serviceInterface, metrics, method, "request");
+        Class<?> parameterizedReturnType = Reflect.parameterizedReturnType(method);
+        Class<?> returnType = method.getReturnType();
+        final ServiceMessage reqMsg = ServiceMessage.builder()
+            .qualifier(Reflect.serviceName(serviceInterface), method.getName())
+            .data(method.getParameterCount() != 0 ? args[0] : null)
+            .build();
 
 
-          if (returnType.isAssignableFrom(Mono.class) && Void.TYPE.equals(parameterizedReturnType)) {
-            return serviceCall.oneWay(reqMsg);
+        if (returnType.isAssignableFrom(Mono.class) && Void.TYPE.equals(parameterizedReturnType)) {
+          return serviceCall.oneWay(reqMsg);
 
-          } else if (returnType.isAssignableFrom(Mono.class)) {
-            return Mono.from(serviceCall.requestOne(reqMsg, parameterizedReturnType))
-                .map(message -> codec.decodeData(message, parameterizedReturnType))
-                .transform(mono -> parameterizedReturnType.equals(ServiceMessage.class) ? mono
-                    : mono.map(ServiceMessage::data));
+        } else if (returnType.isAssignableFrom(Mono.class)) {
+          // noinspection unchecked
+          return Mono.from(serviceCall.requestOne(reqMsg, parameterizedReturnType))
+              .map(message -> codec.decodeData(message, parameterizedReturnType))
+              .transform(mono -> parameterizedReturnType.equals(ServiceMessage.class) ? mono
+                  : mono.map(ServiceMessage::data));
 
-          } else if (returnType.equals(Flux.class)) {
-            return Flux.from(serviceCall.requestMany(reqMsg))
-                .map(message -> codec.decodeData(message, parameterizedReturnType))
-                .transform(flux -> parameterizedReturnType.equals(ServiceMessage.class) ? flux
-                    : flux.map(ServiceMessage::data));
+        } else if (returnType.equals(Flux.class)) {
+          // noinspection unchecked
+          return Flux.from(serviceCall.requestMany(reqMsg))
+              .map(message -> codec.decodeData(message, parameterizedReturnType))
+              .transform(flux -> parameterizedReturnType.equals(ServiceMessage.class) ? flux
+                  : flux.map(ServiceMessage::data));
 
-          } else if (returnType.equals(Void.TYPE)) {
-            serviceCall.oneWay(reqMsg);
-            return null;
+        } else if (returnType.equals(Void.TYPE)) {
+          serviceCall.oneWay(reqMsg);
+          return null;
 
-          } else {
-            LOGGER.error("return value is not supported type.");
-            return null;
-          }
+        } else {
+          LOGGER.error("return value is not supported type.");
+          return null;
         }
       });
     }
