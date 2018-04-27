@@ -121,10 +121,6 @@ public class Microservices {
 
   private ServiceDiscovery discovery;
 
-  private Cluster cluster;
-
-  private Map<String, ? extends ServiceMessageCodec> codecs;
-
   private ServerTransport server;
 
   private final LocalServiceDispatchers localServices;
@@ -138,7 +134,6 @@ public class Microservices {
 
     // provision services for service access.
     this.metrics = metrics;
-    this.codecs = codecs;
     this.client = client;
     this.server = server;
 
@@ -160,11 +155,12 @@ public class Microservices {
         new HashMap<>());
     // register and make them discover-able
 
-    this.serviceRegistry = new ServiceRegistryImpl(localServiceEndpoint);
+    this.serviceRegistry = new ServiceRegistryImpl();
+    serviceRegistry.registerService(localServiceEndpoint);
+
     this.routerFactory = new RouterFactory(this.serviceRegistry);
     this.discovery = new ServiceDiscovery(this.serviceRegistry);
     this.discovery.start(clusterConfig);
-    this.cluster = this.discovery.cluster();
   }
 
   public Metrics metrics() {
@@ -268,11 +264,11 @@ public class Microservices {
   }
 
   public Mono<Void> shutdown() {
-    return Mono.when(Mono.fromFuture(cluster.shutdown()), this.server.stop());
+    return Mono.when(Mono.fromFuture(discovery.shutdown()), this.server.stop());
   }
 
   public Cluster cluster() {
-    return this.cluster;
+    return this.discovery.cluster();
   }
 
 }
