@@ -268,10 +268,7 @@ public class Microservices {
   }
 
   public Mono<Void> shutdown() {
-    return Mono.when(
-        Mono.fromFuture(cluster.shutdown()),
-        Mono.fromFuture(this.discovery.shutdown()),
-        server.stop());
+    return Mono.when(Mono.fromFuture(cluster.shutdown()), this.server.stop());
   }
 
   public Cluster cluster() {
