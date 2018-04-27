@@ -51,6 +51,10 @@ public class RSocketClientTransport implements ClientTransport {
         .subscribe(
             rSocket -> {
               LOGGER.debug("Connected on {}", address);
+              rSocket.onClose().subscribe(aVoid -> {
+                rSockets.remove(address);
+                LOGGER.debug("Connection on {} removed from the pool", address);
+              });
               promise.complete(rSocket);
             },
             throwable -> {
