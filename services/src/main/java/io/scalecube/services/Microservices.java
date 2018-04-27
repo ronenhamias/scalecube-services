@@ -123,8 +123,6 @@ public class Microservices {
 
   private Cluster cluster;
 
-  private Map<String, ? extends ServiceMessageCodec> codecs;
-
   private ServerTransport server;
 
   private final LocalServiceDispatchers localServices;
@@ -138,21 +136,16 @@ public class Microservices {
 
     // provision services for service access.
     this.metrics = metrics;
-    this.codecs = codecs;
     this.client = client;
     this.server = server;
 
-    localServices = LocalServiceDispatchers.builder().services(services).build();
-
-    if (services != null && services.length > 0) {
-      server.accept(new DefaultServerMessageAcceptor(localServices, codecs));
-      InetSocketAddress inet = server.bindAwait(new InetSocketAddress(Addressing.getLocalIpAddress(), 0));
-      this.serviceAddress = Address.create(inet.getHostString(), inet.getPort());
-
-    } else {
-      this.serviceAddress = Address.from("localhost:0");
-    }
-
+    localServices = LocalServiceDispatchers.builder()
+        .server(server)
+        .services(services)
+        .codecs(codecs)
+        .build();
+    this.serviceAddress = localServices.start();
+    
     ServiceEndpoint localServiceEndpoint = ServiceScanner.scan(
         Arrays.stream(services).map(Object::getClass).collect(Collectors.toList()),
         serviceAddress.host(),
