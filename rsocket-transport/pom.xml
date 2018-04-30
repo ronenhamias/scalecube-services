@@ -43,6 +43,13 @@
 		</dependencies>
 	</dependencyManagement>
 	<dependencies>
+
+		<!-- https://mvnrepository.com/artifact/io.aeron/aeron-all -->
+		<dependency>
+			<groupId>io.aeron</groupId>
+			<artifactId>aeron-all</artifactId>
+			<version>1.4.1</version>
+		</dependency>
 		
 		<dependency>
 			<groupId>io.rsocket</groupId>
