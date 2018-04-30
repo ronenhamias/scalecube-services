@@ -8,10 +8,10 @@ import org.reactivestreams.Publisher;
 
 import reactor.core.publisher.Mono;
 
-@Service
+@Service("my.greering.service")
 interface GreetingService {
-
-  @ServiceMethod
+  
+  @ServiceMethod("my.amazing.method")
   Publisher<String> greetingNoParams();
 
   @ServiceMethod
