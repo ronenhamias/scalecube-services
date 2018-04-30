@@ -21,6 +21,7 @@ import io.rsocket.aeron.internal.AeronWrapper;
 import io.rsocket.aeron.internal.DefaultAeronWrapper;
 import io.rsocket.aeron.internal.SingleThreadedEventLoop;
 import io.rsocket.aeron.internal.reactivestreams.AeronChannelServer;
+import io.rsocket.aeron.internal.reactivestreams.AeronChannelServer.AeronChannelStartedServer;
 import io.rsocket.aeron.internal.reactivestreams.AeronSocketAddress;
 
 import org.agrona.concurrent.UnsafeBuffer;
@@ -29,7 +30,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 public class AeronChannelPongServer {
   private static final String GREETING_SAY_HELLO_DATA_JOE = "{'q'=`io.scalecube.services.GreetingService/sayHello`, 'data': 'joe'} ";
   
-  public static void main(String... args) {
+  public static AeronChannelStartedServer main(String... args) {
     MediaDriverHolder holder = MediaDriverHolder.getInstance();
     
     AeronWrapper wrapper = new DefaultAeronWrapper();
@@ -50,6 +51,6 @@ public class AeronChannelPongServer {
     AeronChannelServer server =
         AeronChannelServer.create(consumer, wrapper, managementSubscription, eventLoop);
     AeronChannelServer.AeronChannelStartedServer start = server.start();
-    start.awaitShutdown();
+    return start;
   }
 }
