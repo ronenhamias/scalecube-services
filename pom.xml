@@ -81,6 +81,7 @@
         <module>rsocket-transport</module>
         <module>services-transport</module>
         <module>services</module>
+        <module>scalecube-services-transport-aeron</module>
     </modules>
 
     <dependencies>

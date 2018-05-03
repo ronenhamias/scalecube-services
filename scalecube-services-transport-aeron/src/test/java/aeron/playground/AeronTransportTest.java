@@ -2,13 +2,14 @@ package aeron.playground;
 
 import io.scalecube.testlib.BaseTest;
 
+import io.aeron.driver.MediaDriver;
 import io.rsocket.Closeable;
 import io.rsocket.RSocket;
 import io.rsocket.RSocketFactory;
 import io.rsocket.SocketAcceptor;
 import io.rsocket.aeron.client.AeronClientTransport;
 import io.rsocket.aeron.internal.AeronWrapper;
-
+import io.rsocket.aeron.internal.DefaultAeronWrapper;
 import io.rsocket.aeron.internal.EventLoop;
 import io.rsocket.aeron.internal.SingleThreadedEventLoop;
 import io.rsocket.aeron.internal.reactivestreams.AeronClientChannelConnector;
@@ -24,15 +25,11 @@ import java.nio.charset.Charset;
 
 public class AeronTransportTest extends BaseTest {
   private static final String GREETING_SAY_HELLO_DATA_JOE = "{'q'=`io.scalecube.services.GreetingService/sayHello`, 'data': 'joe'} ";
-
-  static {
-    MediaDriverHolder.getInstance();
-    
-  }
-
+  private MediaDriver driver = MediaDriverBuilder.create("aeron/media/1.9.3");
+  
   public Closeable createServer(String host, int port, SocketAcceptor acceptor) {
     
-    AeronWrapper aeronWrapper = new DefaultAeronWrapper();
+    AeronWrapper aeronWrapper = new DefaultAeronWrapper(driver.aeronDirectoryName());
     AeronSocketAddress address = AeronSocketAddress.create("aeron:udp", host, port);
     // create server transport;
     EventLoop serverEventLoop = new SingleThreadedEventLoop("server");
@@ -47,7 +44,7 @@ public class AeronTransportTest extends BaseTest {
   }
 
   public RSocket createClient(String host, int port) {
-    AeronWrapper aeronWrapper = new DefaultAeronWrapper();
+    AeronWrapper aeronWrapper = new DefaultAeronWrapper(driver.aeronDirectoryName());
     SingleThreadedEventLoop eventLoop = new SingleThreadedEventLoop("client");
   
     AeronSocketAddress receiveAddress = AeronSocketAddress.create("aeron:udp", host, port);
@@ -71,7 +68,7 @@ public class AeronTransportTest extends BaseTest {
     
     byte[] hello = (GREETING_SAY_HELLO_DATA_JOE).getBytes(Charset.defaultCharset());
     
-    rSocket.fireAndForget(DefaultPayload.create(hello)).subscribe();
+    rSocket.requestResponse(DefaultPayload.create(hello)).subscribe();
         
     System.out.println("done");
   }
