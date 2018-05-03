@@ -14,7 +14,7 @@ import io.scalecube.services.Microservices;
  * 
  * the
  */
-public class Application {
+public class Example1 {
 
   public static void main(String[] args) {
     Microservices seed = Microservices.builder().build();
