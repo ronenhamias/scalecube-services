@@ -2,7 +2,6 @@ package io.scalecube.examples.helloworld;
 
 import io.scalecube.examples.helloworld.service.GreetingServiceImpl;
 import io.scalecube.examples.helloworld.service.api.Greeting;
-import io.scalecube.examples.helloworld.service.api.GreetingsService;
 import io.scalecube.services.Microservices;
 import io.scalecube.services.ServiceCall.Call;
 import io.scalecube.services.api.ServiceMessage;
