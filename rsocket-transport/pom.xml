@@ -34,27 +34,10 @@
 				<version>${rsocket.version}</version>
 			</dependency>
 
-			<dependency>
-				<groupId>io.rsocket</groupId>
-				<artifactId>rsocket-transport-aeron</artifactId>
-				<version>${rsocket.version}</version>
-			</dependency>
-
 		</dependencies>
 	</dependencyManagement>
 	<dependencies>
 
-		<!-- https://mvnrepository.com/artifact/io.aeron/aeron-all -->
-		<dependency>
-			<groupId>io.aeron</groupId>
-			<artifactId>aeron-all</artifactId>
-			<version>1.4.1</version>
-		</dependency>
-		
-		<dependency>
-			<groupId>io.rsocket</groupId>
-			<artifactId>rsocket-transport-aeron</artifactId>
-		</dependency>
 		<dependency>
 			<groupId>io.scalecube</groupId>
 			<artifactId>scalecube-services-transport</artifactId>
