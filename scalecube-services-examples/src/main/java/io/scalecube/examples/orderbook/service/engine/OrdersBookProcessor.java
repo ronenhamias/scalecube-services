@@ -27,18 +27,14 @@ public class OrdersBookProcessor {
 
     bids.subscribe(onNext -> {
       if (!bidsBuffer.containsKey(onNext.getPrice())) {
-        bidsBuffer.put(onNext.getPrice(), new ConcurrentSkipListMap<>((Long v1, Long v2) -> {
-          return accending(v1, v2);
-        }));
+        bidsBuffer.put(onNext.getPrice(), new ConcurrentSkipListMap<>((Long v1, Long v2) -> accending(v1, v2)));
       }
       bidsBuffer.get(onNext.getPrice()).put(onNext.time(), onNext);
     });
 
     asks.subscribe(onNext -> {
       if (!asksBuffer.containsKey(onNext.getPrice())) {
-        asksBuffer.put(onNext.getPrice(), new ConcurrentSkipListMap<>((Long v1, Long v2) -> {
-          return accending(v1, v2);
-        }));
+        asksBuffer.put(onNext.getPrice(), new ConcurrentSkipListMap<>((Long v1, Long v2) -> deccending(v1, v2)));
       }
       asksBuffer.get(onNext.getPrice()).put(onNext.time(), onNext);
     });
@@ -53,9 +49,7 @@ public class OrdersBookProcessor {
   }
 
   private Set<Entry<Integer, Integer>> from(Collection<Map<Long, Order>> collection) {
-    Map<Integer, Integer> result = new ConcurrentSkipListMap<>((Integer v1, Integer v2) -> {
-      return accending(v1, v2);
-    });
+    Map<Integer, Integer> result = new ConcurrentSkipListMap<>((Integer v1, Integer v2) -> accending(v1, v2));
 
     collection.forEach(action -> {
       Map<Integer, Integer> aggregate = sum(action);
@@ -69,10 +63,9 @@ public class OrdersBookProcessor {
 
 
 
-  private synchronized Map<Integer, Integer> sum(Map<Long, Order> value) {
-    Map<Integer, Integer> result = new ConcurrentSkipListMap<>((Integer v1, Integer v2) -> {
-      return accending(v1, v2);
-    });
+  private Map<Integer, Integer> sum(Map<Long, Order> value) {
+    Map<Integer, Integer> result = new ConcurrentSkipListMap<>((Integer v1, Integer v2) -> accending(v1, v2));
+
     value.entrySet().forEach(action -> {
       int units = value.values().stream().mapToInt(Order::getUnits).sum();
       int price = value.values().stream().distinct().findFirst().get().getPrice();
