@@ -1,7 +1,6 @@
 package io.scalecube.examples.orderbook.service.engine;
 
 import java.time.Duration;
-import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -9,11 +8,9 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.scheduler.Schedulers;
 
 public class OrdersBookProcessor {
 
-  private Flux<OrderMatch> matched;
 
   Map<Integer, Map<Long, Order>> asksBuffer = new ConcurrentSkipListMap<>((Integer v1, Integer v2) -> {
     return deccending(v1, v2);
@@ -22,6 +19,18 @@ public class OrdersBookProcessor {
   Map<Integer, Map<Long, Order>> bidsBuffer = new ConcurrentSkipListMap<>((Integer v1, Integer v2) -> {
     return accending(v1, v2);
   });
+
+  private EmitterProcessor<Entry<Integer, Integer>> askStream = EmitterProcessor.<Entry<Integer, Integer>>create();
+
+  private EmitterProcessor<Entry<Integer, Integer>> bidStream = EmitterProcessor.<Entry<Integer, Integer>>create();
+
+  public Flux<Entry<Integer, Integer>> asks() {
+    return askStream;
+  }
+
+  public Flux<Entry<Integer, Integer>> bids() {
+    return bidStream;
+  }
 
   public OrdersBookProcessor(Flux<Order> bids, Flux<Order> asks, int level) {
 
@@ -38,20 +47,35 @@ public class OrdersBookProcessor {
       }
       asksBuffer.get(onNext.getPrice()).put(onNext.time(), onNext);
     });
+    emitAsks();
+    emitBids();
   }
 
-  public Flux<Entry<Integer, Integer>> asks() {
-    return collectStream(from(asksBuffer.values()));
+  private void emitAsks() {
+
+    Flux.interval(Duration.ofSeconds(1))
+        .subscribe(consumer -> {
+          Set<Entry<Integer, Integer>> items = from(asksBuffer);
+          items.forEach(item -> {
+            askStream.onNext(item);
+          });
+        });
   }
 
-  public Flux<Entry<Integer, Integer>> bids() {
-    return collectStream(from(bidsBuffer.values()));
+  private void emitBids() {
+    Flux.interval(Duration.ofSeconds(1))
+        .subscribe(consumer -> {
+          Set<Entry<Integer, Integer>> items = from(bidsBuffer);
+          items.forEach(item -> {
+            bidStream.onNext(item);
+          });
+        });
   }
 
-  private Set<Entry<Integer, Integer>> from(Collection<Map<Long, Order>> collection) {
+  private Set<Entry<Integer, Integer>> from(Map<Integer, Map<Long, Order>> asksBuffer) {
     Map<Integer, Integer> result = new ConcurrentSkipListMap<>((Integer v1, Integer v2) -> accending(v1, v2));
 
-    collection.forEach(action -> {
+    asksBuffer.values().forEach(action -> {
       Map<Integer, Integer> aggregate = sum(action);
       aggregate.entrySet().forEach(item -> {
         result.put(item.getKey(), item.getValue());
@@ -73,25 +97,7 @@ public class OrdersBookProcessor {
     });
     return result;
   }
-
-  private Flux<Entry<Integer, Integer>> collectStream(Set<Entry<Integer, Integer>> askOrBids) {
-    EmitterProcessor<Entry<Integer, Integer>> stream = EmitterProcessor.<Entry<Integer, Integer>>create();
-    Flux.interval(Duration.ofSeconds(1))
-        .subscribeOn(Schedulers.single())
-        .subscribe(s -> {
-          askOrBids.stream().forEach(action -> {
-            stream.onNext(action);
-          });
-        });
-    return stream;
-  }
-
-
-
-  public Flux<OrderMatch> matched() {
-    return matched;
-  }
-
+  
   private int deccending(Long v1, Long v2) {
     return v1 > v2 ? -1 : v1 < v2 ? +1 : 0;
   }
@@ -107,4 +113,6 @@ public class OrdersBookProcessor {
   private int accending(Integer v1, Integer v2) {
     return v1 < v2 ? -1 : v1 > v2 ? +1 : 0;
   }
+
+
 }
