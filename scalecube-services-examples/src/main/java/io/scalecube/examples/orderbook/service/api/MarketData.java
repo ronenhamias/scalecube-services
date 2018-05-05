@@ -17,4 +17,15 @@ public class MarketData {
     this.type = type;
   }
 
+  public Integer price() {
+    return this.price;
+  }
+
+  public Integer amount() {
+    return this.amount;
+  }
+
+  public String type() {
+    return this.type;
+  }
 }
