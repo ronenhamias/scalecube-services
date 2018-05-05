@@ -18,9 +18,7 @@ public class FakeMarketDataService implements MarketDataService {
 
   public FakeMarketDataService() {
     this.processor = new OrdersBookProcessor(bids, asks, 4);
-    
   }
-
 
   @Override
   public Flux<MarketData> bids() {
@@ -31,7 +29,6 @@ public class FakeMarketDataService implements MarketDataService {
   public Flux<MarketData> asks() {
     return processor.asks().map(mapper-> new MarketData("ask",mapper.getKey(),mapper.getValue()));
   }
-
 
   @Override
   public Mono<Void> processOrder(Order order) {

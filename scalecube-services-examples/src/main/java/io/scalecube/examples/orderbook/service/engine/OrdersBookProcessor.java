@@ -1,10 +1,13 @@
 package io.scalecube.examples.orderbook.service.engine;
 
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
@@ -55,7 +58,11 @@ public class OrdersBookProcessor {
 
     Flux.interval(Duration.ofSeconds(1))
         .subscribe(consumer -> {
-          Set<Entry<Integer, Integer>> items = from(asksBuffer);
+          Set<Entry<Integer, Integer>> items = from(asksBuffer, new Comparator<Integer>() {
+            @Override
+            public int compare(Integer v1, Integer v2) {
+              return accending(v1, v2);
+            }});
           items.forEach(item -> {
             askStream.onNext(item);
           });
@@ -65,15 +72,19 @@ public class OrdersBookProcessor {
   private void emitBids() {
     Flux.interval(Duration.ofSeconds(1))
         .subscribe(consumer -> {
-          Set<Entry<Integer, Integer>> items = from(bidsBuffer);
+          Set<Entry<Integer, Integer>> items = from(bidsBuffer,new Comparator<Integer>() {
+            @Override
+            public int compare(Integer v1, Integer v2) {
+              return deccending(v1, v2);
+            }});
           items.forEach(item -> {
             bidStream.onNext(item);
           });
         });
   }
-
-  private Set<Entry<Integer, Integer>> from(Map<Integer, Map<Long, Order>> asksBuffer) {
-    Map<Integer, Integer> result = new ConcurrentSkipListMap<>((Integer v1, Integer v2) -> accending(v1, v2));
+  
+  private Set<Entry<Integer, Integer>> from(Map<Integer, Map<Long, Order>> asksBuffer, Comparator direction) {
+    Map<Integer, Integer> result = new ConcurrentSkipListMap<>( direction);
 
     asksBuffer.values().forEach(action -> {
       Map<Integer, Integer> aggregate = sum(action);

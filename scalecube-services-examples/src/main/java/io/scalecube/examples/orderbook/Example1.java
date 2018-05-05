@@ -33,7 +33,7 @@ public class Example1 {
     });
 
     // Generate ask and bid orders
-    Flux.interval(Duration.ofMillis(300)).subscribe(consumer -> {
+    Flux.interval(Duration.ofMillis(100)).subscribe(consumer -> {
       if (rnd.nextInt(2) == 1) {
         marketService.processOrder(
             new Order("bid", "order" + orderId.incrementAndGet(), rnd.nextInt(10), 2));
