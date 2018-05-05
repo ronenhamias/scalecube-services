@@ -1,9 +1,12 @@
 package io.scalecube.examples.orderbook.service.engine;
 
 public class Order {
+
+  public Order() {}
+
   @Override
   public String toString() {
-    return "Bid [orderId=" + orderId + ", price=" + price + ", size=" + size + "]";
+    return "Order [type=" + type + ", orderId=" + orderId + ", price=" + price + ", size=" + size +", time=" + time +"]";
   }
 
   private String orderId;
@@ -20,20 +23,20 @@ public class Order {
     this.time = System.currentTimeMillis();
   }
 
-  public String getOrderId() {
+  public String type() {
+    return this.type;
+  }
+
+  public String orderId() {
     return orderId;
   }
 
-  public int getPrice() {
+  public int price() {
     return price;
   }
 
-  public int getUnits() {
+  public int units() {
     return size;
-  }
-
-  public void setSize(int size) {
-    this.size = size;
   }
 
   @Override
@@ -60,9 +63,6 @@ public class Order {
     return time;
   }
 
-  public String type() {
-    return this.type;
-  }
 
 
 }

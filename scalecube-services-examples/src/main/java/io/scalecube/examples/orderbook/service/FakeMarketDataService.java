@@ -1,8 +1,11 @@
 package io.scalecube.examples.orderbook.service;
 
+import io.scalecube.examples.orderbook.service.api.MarketData;
 import io.scalecube.examples.orderbook.service.api.MarketDataService;
 import io.scalecube.examples.orderbook.service.engine.Order;
 import io.scalecube.examples.orderbook.service.engine.OrdersBookProcessor;
+
+import java.util.Map.Entry;
 
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
@@ -11,30 +14,24 @@ import reactor.core.publisher.Mono;
 
 public class FakeMarketDataService implements MarketDataService {
 
-  OrdersBookProcessor processor;
-  private EmitterProcessor<Order> bids = EmitterProcessor.<Order>create();
-  private EmitterProcessor<Order> asks = EmitterProcessor.<Order>create();
+  private final OrdersBookProcessor processor;
+  private final  EmitterProcessor<Order> bids = EmitterProcessor.<Order>create();
+  private final  EmitterProcessor<Order> asks = EmitterProcessor.<Order>create();
 
   public FakeMarketDataService() {
-    processor = new OrdersBookProcessor(bids, asks, 4);
-    processor.asks().subscribe(consumer -> {
-      System.out.println(consumer);
-    });
-
-    processor.bids().subscribe(consumer -> {
-      System.out.println(consumer);
-    });
+    this.processor = new OrdersBookProcessor(bids, asks, 4);
+    
   }
 
 
   @Override
-  public Flux<Order> bids() {
-    return bids;
+  public Flux<MarketData> bids() {
+    return processor.bids().map(mapper-> new MarketData("bid", mapper.getKey(),mapper.getValue()));
   }
 
   @Override
-  public Flux<Order> asks() {
-    return asks;
+  public Flux<MarketData> asks() {
+    return processor.asks().map(mapper-> new MarketData("ask",mapper.getKey(),mapper.getValue()));
   }
 
 
@@ -42,8 +39,9 @@ public class FakeMarketDataService implements MarketDataService {
   public Mono<Void> processOrder(Order order) {
     if ("ask".equals(order.type())) {
       asks.onNext(order);
-    } else
+    } else if("bid".equals(order.type())) {
       bids.onNext(order);
+    }
     return Mono.empty();
   }
 

@@ -14,8 +14,8 @@ public interface MarketDataService {
   Mono<Void> processOrder(Order order);
 
   @ServiceMethod("bids")
-  Flux<Order> bids();
+  Flux<MarketData> bids();
 
   @ServiceMethod("asks")
-  Flux<Order> asks();
+  Flux<MarketData> asks();
 }

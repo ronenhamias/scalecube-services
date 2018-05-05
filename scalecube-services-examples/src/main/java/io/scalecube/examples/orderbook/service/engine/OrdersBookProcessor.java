@@ -35,17 +35,17 @@ public class OrdersBookProcessor {
   public OrdersBookProcessor(Flux<Order> bids, Flux<Order> asks, int level) {
 
     bids.subscribe(onNext -> {
-      if (!bidsBuffer.containsKey(onNext.getPrice())) {
-        bidsBuffer.put(onNext.getPrice(), new ConcurrentSkipListMap<>((Long v1, Long v2) -> accending(v1, v2)));
+      if (!bidsBuffer.containsKey(onNext.price())) {
+        bidsBuffer.put(onNext.price(), new ConcurrentSkipListMap<>((Long v1, Long v2) -> accending(v1, v2)));
       }
-      bidsBuffer.get(onNext.getPrice()).put(onNext.time(), onNext);
+      bidsBuffer.get(onNext.price()).put(onNext.time(), onNext);
     });
 
     asks.subscribe(onNext -> {
-      if (!asksBuffer.containsKey(onNext.getPrice())) {
-        asksBuffer.put(onNext.getPrice(), new ConcurrentSkipListMap<>((Long v1, Long v2) -> deccending(v1, v2)));
+      if (!asksBuffer.containsKey(onNext.price())) {
+        asksBuffer.put(onNext.price(), new ConcurrentSkipListMap<>((Long v1, Long v2) -> deccending(v1, v2)));
       }
-      asksBuffer.get(onNext.getPrice()).put(onNext.time(), onNext);
+      asksBuffer.get(onNext.price()).put(onNext.time(), onNext);
     });
     emitAsks();
     emitBids();
@@ -91,8 +91,8 @@ public class OrdersBookProcessor {
     Map<Integer, Integer> result = new ConcurrentSkipListMap<>((Integer v1, Integer v2) -> accending(v1, v2));
 
     value.entrySet().forEach(action -> {
-      int units = value.values().stream().mapToInt(Order::getUnits).sum();
-      int price = value.values().stream().distinct().findFirst().get().getPrice();
+      int units = value.values().stream().mapToInt(Order::units).sum();
+      int price = value.values().stream().distinct().findFirst().get().price();
       result.put(price, units);
     });
     return result;
@@ -102,12 +102,12 @@ public class OrdersBookProcessor {
     return v1 > v2 ? -1 : v1 < v2 ? +1 : 0;
   }
 
-  private int accending(Long v1, Long v2) {
-    return v1 < v2 ? -1 : v1 > v2 ? +1 : 0;
-  }
-
   private int deccending(Integer v1, Integer v2) {
     return v1 > v2 ? -1 : v1 < v2 ? +1 : 0;
+  }
+  
+  private int accending(Long v1, Long v2) {
+    return v1 < v2 ? -1 : v1 > v2 ? +1 : 0;
   }
 
   private int accending(Integer v1, Integer v2) {
