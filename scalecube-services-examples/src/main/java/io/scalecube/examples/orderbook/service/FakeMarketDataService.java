@@ -5,8 +5,6 @@ import io.scalecube.examples.orderbook.service.api.MarketDataService;
 import io.scalecube.examples.orderbook.service.engine.Order;
 import io.scalecube.examples.orderbook.service.engine.OrdersBookProcessor;
 
-import java.util.Map.Entry;
-
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
