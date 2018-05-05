@@ -17,7 +17,7 @@ public class FakeMarketDataService implements MarketDataService {
   private final  EmitterProcessor<Order> asks = EmitterProcessor.<Order>create();
 
   public FakeMarketDataService() {
-    this.processor = new OrdersBookProcessor(bids, asks, 4);
+    this.processor = new OrdersBookProcessor(bids, asks);
   }
 
   @Override
