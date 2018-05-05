@@ -1,7 +1,6 @@
 package io.scalecube.examples.orderbook;
 
 import io.scalecube.examples.orderbook.service.FakeMarketDataService;
-import io.scalecube.examples.orderbook.service.api.MarketData;
 import io.scalecube.examples.orderbook.service.api.MarketDataService;
 import io.scalecube.examples.orderbook.service.engine.Order;
 import io.scalecube.services.Microservices;

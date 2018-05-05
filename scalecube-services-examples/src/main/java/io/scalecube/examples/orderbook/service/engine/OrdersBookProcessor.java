@@ -6,8 +6,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
@@ -35,7 +33,7 @@ public class OrdersBookProcessor {
     return bidStream;
   }
 
-  public OrdersBookProcessor(Flux<Order> bids, Flux<Order> asks, int level) {
+  public OrdersBookProcessor(Flux<Order> bids, Flux<Order> asks) {
 
     bids.subscribe(onNext -> {
       if (!bidsBuffer.containsKey(onNext.price())) {

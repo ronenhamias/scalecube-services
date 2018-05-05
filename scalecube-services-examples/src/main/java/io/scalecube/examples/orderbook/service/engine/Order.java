@@ -2,18 +2,14 @@ package io.scalecube.examples.orderbook.service.engine;
 
 public class Order {
 
-  public Order() {}
-
-  @Override
-  public String toString() {
-    return "Order [type=" + type + ", orderId=" + orderId + ", price=" + price + ", size=" + size +", time=" + time +"]";
-  }
 
   private String orderId;
   private int price;
   private int size;
   private Long time;
   private String type;
+
+  public Order() {}
 
   public Order(String type, String orderId, int price, int size) {
     this.orderId = orderId;
@@ -63,6 +59,10 @@ public class Order {
     return time;
   }
 
+  @Override
+  public String toString() {
+    return "Order [type=" + type + ", orderId=" + orderId + ", price=" + price + ", size=" + size +", time=" + time +"]";
+  }
 
 
 }
