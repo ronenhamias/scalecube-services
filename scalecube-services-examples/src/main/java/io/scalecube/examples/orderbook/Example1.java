@@ -40,7 +40,7 @@ public class Example1 {
     });
 
     // Generate ask and bid orders
-    Flux.interval(Duration.ofMillis(100)).subscribe(consumer -> {
+    Flux.interval(Duration.ofMillis(50)).subscribe(consumer -> {
       if (rnd.nextInt(2) == 1) {
         marketService.processOrder(
             new Order("bid", "order" + orderId.incrementAndGet(), rnd.nextInt(10)+10, 2));
@@ -57,14 +57,14 @@ public class Example1 {
 
   private static void print() {
     System.out.println("====== Asks ========");
-    System.out.println("  Price\t|\tAmount");
+    System.out.println("  Price\t|  Amount");
     asks.entrySet().forEach(action->{
-      System.out.println("  "+action.getKey() + "\t|\t" +  action.getValue());   
+      System.out.println("   "+action.getKey() + "\t|    " +  action.getValue());   
     });
     System.out.println("====== Bids ========");
-    System.out.println("  Price\t|\tAmount");
+    System.out.println("  Price\t|  Amount");
     bids.entrySet().forEach(action->{
-      System.out.println("  "+action.getKey() + "\t|\t" +  action.getValue());   
+      System.out.println("   "+action.getKey() + "\t|    " +  action.getValue());   
     });
   }
 
