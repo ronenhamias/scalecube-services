@@ -1,127 +1,63 @@
 package io.scalecube.examples.orderbook.service.engine;
 
-import java.time.Duration;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListMap;
+import io.scalecube.examples.orderbook.service.engine.events.AddOrder;
+import io.scalecube.examples.orderbook.service.engine.events.CancelOrder;
+import io.scalecube.examples.orderbook.service.engine.events.Match;
 
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 
 public class OrdersBookProcessor {
 
+  private final EmitterProcessor<Order> inboundOrders = EmitterProcessor.<Order>create();
 
-  Map<Integer, Map<Long, Order>> asksBuffer = new ConcurrentSkipListMap<>((Integer v1, Integer v2) -> {
-    return deccending(v1, v2);
-  });
-
-  Map<Integer, Map<Long, Order>> bidsBuffer = new ConcurrentSkipListMap<>((Integer v1, Integer v2) -> {
-    return accending(v1, v2);
-  });
-
-  private EmitterProcessor<Entry<Integer, Integer>> askStream = EmitterProcessor.<Entry<Integer, Integer>>create();
-
-  private EmitterProcessor<Entry<Integer, Integer>> bidStream = EmitterProcessor.<Entry<Integer, Integer>>create();
-
-  public Flux<Entry<Integer, Integer>> asks() {
-    return askStream;
-  }
-
-  public Flux<Entry<Integer, Integer>> bids() {
-    return bidStream;
-  }
-
-  public OrdersBookProcessor(Flux<Order> bids, Flux<Order> asks) {
-
-    bids.subscribe(onNext -> {
-      if (!bidsBuffer.containsKey(onNext.price())) {
-        bidsBuffer.put(onNext.price(), new ConcurrentSkipListMap<>((Long v1, Long v2) -> accending(v1, v2)));
-      }
-      bidsBuffer.get(onNext.price()).put(onNext.time(), onNext);
+  public OrdersBookProcessor() {
+    inboundOrders.subscribe(order -> {
+      orderBook.enter(order.id(), order.level().side(), order.level().price(), order.remainingQuantity());
     });
-
-    asks.subscribe(onNext -> {
-      if (!asksBuffer.containsKey(onNext.price())) {
-        asksBuffer.put(onNext.price(), new ConcurrentSkipListMap<>((Long v1, Long v2) -> deccending(v1, v2)));
-      }
-      asksBuffer.get(onNext.price()).put(onNext.time(), onNext);
-    });
-    emitAsks();
-    emitBids();
   }
 
-  private void emitAsks() {
-
-    Flux.interval(Duration.ofSeconds(1))
-        .subscribe(consumer -> {
-          Set<Entry<Integer, Integer>> items = from(asksBuffer, new Comparator<Integer>() {
-            @Override
-            public int compare(Integer v1, Integer v2) {
-              return accending(v1, v2);
-            }});
-          items.forEach(item -> {
-            askStream.onNext(item);
-          });
-        });
-  }
-
-  private void emitBids() {
-    Flux.interval(Duration.ofSeconds(1))
-        .subscribe(consumer -> {
-          Set<Entry<Integer, Integer>> items = from(bidsBuffer,new Comparator<Integer>() {
-            @Override
-            public int compare(Integer v1, Integer v2) {
-              return deccending(v1, v2);
-            }});
-          items.forEach(item -> {
-            bidStream.onNext(item);
-          });
-        });
+  OrderBook orderBook = new OrderBook();
+  
+  /**
+   * Cancel a quantity of an order.
+   *
+   * @param orderId the order identifier
+   * @param canceledQuantity the canceled quantity
+   * @param remainingQuantity the remaining quantity
+   */
+  Flux<CancelOrder> listenCancel(){
+    return orderBook.cancel();
   }
   
-  private Set<Entry<Integer, Integer>> from(Map<Integer, Map<Long, Order>> asksBuffer, Comparator direction) {
-    Map<Integer, Integer> result = new ConcurrentSkipListMap<>( direction);
-
-    asksBuffer.values().forEach(action -> {
-      Map<Integer, Integer> aggregate = sum(action);
-      aggregate.entrySet().forEach(item -> {
-        result.put(item.getKey(), item.getValue());
-      });
-    });
-    return result.entrySet();
-
-  }
-
-
-
-  private Map<Integer, Integer> sum(Map<Long, Order> value) {
-    Map<Integer, Integer> result = new ConcurrentSkipListMap<>((Integer v1, Integer v2) -> accending(v1, v2));
-
-    value.entrySet().forEach(action -> {
-      int units = value.values().stream().mapToInt(Order::units).sum();
-      int price = value.values().stream().distinct().findFirst().get().price();
-      result.put(price, units);
-    });
-    return result;
+  /**
+   * Add an order to the order book.
+   *
+   * @param orderId the order identifier
+   * @param side the side
+   * @param price the limit price
+   * @param size the size
+   */
+  Flux<AddOrder> listenAdd(){
+    return orderBook.add();
   }
   
-  private int deccending(Long v1, Long v2) {
-    return v1 > v2 ? -1 : v1 < v2 ? +1 : 0;
-  }
-
-  private int deccending(Integer v1, Integer v2) {
-    return v1 > v2 ? -1 : v1 < v2 ? +1 : 0;
+  /**
+   * Match an incoming order to a resting order in the order book. The match
+   * occurs at the price of the order in the order book.
+   *
+   * @param restingOrderId the order identifier of the resting order
+   * @param incomingOrderId the order identifier of the incoming order
+   * @param incomingSide the side of the incoming order
+   * @param price the execution price
+   * @param executedQuantity the executed quantity
+   * @param remainingQuantity the remaining quantity of the resting order
+   */
+  public Flux<Match> listenMatch(){
+    return orderBook.match();
   }
   
-  private int accending(Long v1, Long v2) {
-    return v1 < v2 ? -1 : v1 > v2 ? +1 : 0;
+  public void onNext(Order order) {
+    inboundOrders.onNext(order);
   }
-
-  private int accending(Integer v1, Integer v2) {
-    return v1 < v2 ? -1 : v1 > v2 ? +1 : 0;
-  }
-
-
 }

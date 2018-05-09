@@ -10,7 +10,7 @@
 	<artifactId>scalecube-services-examples</artifactId>
 
 	<dependencies>
-	<dependency>
+		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>scalecube-services-api</artifactId>
 			<version>${project.version}</version>
@@ -19,6 +19,11 @@
 			<groupId>${project.groupId}</groupId>
 			<artifactId>scalecube-services</artifactId>
 			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>it.unimi.dsi</groupId>
+			<artifactId>fastutil</artifactId>
+			<version>8.1.1</version>
 		</dependency>
 	</dependencies>
 </project>

@@ -2,67 +2,38 @@ package io.scalecube.examples.orderbook.service.engine;
 
 public class Order {
 
+  private PriceLevel level;
 
-  private String orderId;
-  private int price;
-  private int size;
-  private Long time;
-  private String type;
+  private long id;
 
-  public Order() {}
+  private long remainingQuantity;
 
-  public Order(String type, String orderId, int price, int size) {
-    this.orderId = orderId;
-    this.price = price;
-    this.size = size;
-    this.type = type;
-    this.time = System.currentTimeMillis();
+  public Order(PriceLevel level, long id, long size) {
+    this.level = level;
+
+    this.id = id;
+
+    this.remainingQuantity = size;
   }
 
-  public String type() {
-    return this.type;
+  public PriceLevel level() {
+    return level;
   }
 
-  public String orderId() {
-    return orderId;
+  public long id() {
+    return id;
   }
 
-  public int price() {
-    return price;
+  public long remainingQuantity() {
+    return remainingQuantity;
   }
 
-  public int units() {
-    return size;
+  public void reduce(long quantity) {
+    remainingQuantity -= quantity;
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    Order order = (Order) o;
-
-    return orderId.equals(order.orderId);
-
+  public void resize(long size) {
+    remainingQuantity = size;
   }
-
-  @Override
-  public int hashCode() {
-    return orderId.hashCode();
-  }
-
-  public Long time() {
-    return time;
-  }
-
-  @Override
-  public String toString() {
-    return "Order [type=" + type + ", orderId=" + orderId + ", price=" + price + ", size=" + size +", time=" + time +"]";
-  }
-
 
 }
