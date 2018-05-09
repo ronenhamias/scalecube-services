@@ -10,9 +10,7 @@ public class Order {
 
   public Order(PriceLevel level, long id, long size) {
     this.level = level;
-
     this.id = id;
-
     this.remainingQuantity = size;
   }
 

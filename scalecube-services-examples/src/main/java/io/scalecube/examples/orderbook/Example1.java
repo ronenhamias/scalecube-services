@@ -3,6 +3,7 @@ package io.scalecube.examples.orderbook;
 import io.scalecube.examples.orderbook.service.DefaultMarketDataService;
 import io.scalecube.examples.orderbook.service.api.MarketDataService;
 import io.scalecube.examples.orderbook.service.engine.Order;
+import io.scalecube.examples.orderbook.service.engine.OrderBookSnapshoot;
 import io.scalecube.examples.orderbook.service.engine.PriceLevel;
 import io.scalecube.examples.orderbook.service.engine.Side;
 import io.scalecube.services.Microservices;
@@ -19,12 +20,7 @@ public class Example1 {
 
   static Random rnd = new Random(5);
   static AtomicLong orderId = new AtomicLong(1);
-
-  static Map<Integer, Integer> bids =
-      new ConcurrentSkipListMap<Integer, Integer>((Integer v1, Integer v2) -> accending(v1, v2));
-  static Map<Integer, Integer> asks =
-      new ConcurrentSkipListMap<Integer, Integer>((Integer v1, Integer v2) -> deccending(v1, v2));
-
+  
   public static void main(String[] args) throws InterruptedException {
 
     Microservices gateway = Microservices.builder().build();
@@ -36,8 +32,12 @@ public class Example1 {
 
     MarketDataService marketService = ms.call().api(MarketDataService.class);
 
+    marketService.orderBook().subscribe(order -> {
+      print(order);
+    });
+    
     marketService.match().subscribe(match -> {
-      System.out.println(match);
+      
     });
     // Generate ask and bid orders
     Flux.interval(Duration.ofMillis(50)).subscribe(consumer -> {
@@ -59,26 +59,18 @@ public class Example1 {
   }
 
 
-  private static void print() {
+  private static void print(OrderBookSnapshoot snapshoot) {
     System.out.println("====== Asks ========");
     System.out.println("  Price\t|  Amount");
-    asks.entrySet().forEach(action -> {
+    snapshoot.asks().entrySet().forEach(action -> {
       System.out.println("   " + action.getKey() + "\t|    " + action.getValue());
     });
+    System.out.println("====================\nCurrent Price (" + snapshoot.currentPrice()+ ")");
     System.out.println("====== Bids ========");
     System.out.println("  Price\t|  Amount");
-    bids.entrySet().forEach(action -> {
+    snapshoot.bids().entrySet().forEach(action -> {
       System.out.println("   " + action.getKey() + "\t|    " + action.getValue());
     });
   }
 
-
-  private static int deccending(Integer v1, Integer v2) {
-    return v1 > v2 ? -1 : v1 < v2 ? +1 : 0;
-  }
-
-
-  private static int accending(Integer v1, Integer v2) {
-    return v1 < v2 ? -1 : v1 > v2 ? +1 : 0;
-  }
 }

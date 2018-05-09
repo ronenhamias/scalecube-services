@@ -38,7 +38,7 @@ public class OrdersBookProcessor {
    * @param price the limit price
    * @param size the size
    */
-  Flux<AddOrder> listenAdd(){
+  public Flux<AddOrder> listenAdd(){
     return orderBook.add();
   }
   
@@ -60,4 +60,5 @@ public class OrdersBookProcessor {
   public void onNext(Order order) {
     inboundOrders.onNext(order);
   }
+
 }

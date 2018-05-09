@@ -5,14 +5,14 @@ import io.scalecube.examples.orderbook.service.engine.Side;
 public class AddOrder {
 
   long orderId;
-  Side buy;
+  Side side;
   long price;
   long remainingQuantity;
 
   public AddOrder() {};
-  public AddOrder(long orderId, Side buy, long price, long remainingQuantity) {
+  public AddOrder(long orderId, Side side, long price, long remainingQuantity) {
     this.orderId = orderId;
-    this.buy = buy;
+    this.side = side;
     this.price = price;
     this.remainingQuantity = remainingQuantity;
   }
@@ -21,8 +21,8 @@ public class AddOrder {
     return orderId;
   }
 
-  public Side buy() {
-    return buy;
+  public Side side() {
+    return side;
   }
 
   public long price() {

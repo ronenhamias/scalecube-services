@@ -1,6 +1,7 @@
 package io.scalecube.examples.orderbook.service.api;
 
 import io.scalecube.examples.orderbook.service.engine.Order;
+import io.scalecube.examples.orderbook.service.engine.OrderBookSnapshoot;
 import io.scalecube.examples.orderbook.service.engine.events.Match;
 import io.scalecube.services.annotations.Service;
 import io.scalecube.services.annotations.ServiceMethod;
@@ -17,4 +18,7 @@ public interface MarketDataService {
   
   @ServiceMethod("match")
   Flux<Match> match();
+
+  @ServiceMethod("orderBook")
+  Flux<OrderBookSnapshoot> orderBook();
 }
