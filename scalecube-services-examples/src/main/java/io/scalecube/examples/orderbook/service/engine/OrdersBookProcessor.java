@@ -17,7 +17,7 @@ public class OrdersBookProcessor {
     });
   }
 
-  OrderBook orderBook = new OrderBook();
+  MatchingEngine orderBook = new MatchingEngine();
   
   /**
    * Cancel a quantity of an order.
@@ -26,7 +26,7 @@ public class OrdersBookProcessor {
    * @param canceledQuantity the canceled quantity
    * @param remainingQuantity the remaining quantity
    */
-  Flux<CancelOrder> listenCancel(){
+  public Flux<CancelOrder> listenCancel(){
     return orderBook.cancel();
   }
   

@@ -6,11 +6,18 @@ import java.util.Map;
 public class OrderBookSnapshoot {
 
 
+  @Override
+  public String toString() {
+    return "OrderBookSnapshoot [book=" + book + "]";
+  }
+
   Map<Long, Long> bids = new HashMap<Long, Long>();
 
   Map<Long, Long> asks = new HashMap<Long, Long>();
 
   Long currentPrice;
+
+  private OrderBook book;
 
   public OrderBookSnapshoot() {
 
@@ -22,6 +29,13 @@ public class OrderBookSnapshoot {
     this.currentPrice = currentPrice;
   }
 
+  public OrderBookSnapshoot(OrderBook book) {
+    this.book = book;
+  }
+  public OrderBook book() {
+    return book;
+  }
+  
   public Map<Long, Long> bids() {
     return bids;
   }
