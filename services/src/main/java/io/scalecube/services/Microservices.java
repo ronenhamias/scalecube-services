@@ -146,27 +146,24 @@ public class Microservices {
     this.serviceDispatchers = LocalServiceDispatchers.builder()
         .services(builder.services.stream().map(ServiceInfo::service).collect(Collectors.toList())).build();
 
+    serviceRegistry = new ServiceRegistryImpl();
     if (services.size() > 0) {
       server.accept(new DefaultServiceMessageAcceptor(serviceDispatchers));
       InetSocketAddress address = server.bindAwait(new InetSocketAddress(Addressing.getLocalIpAddress(), servicePort));
       serviceAddress = Address.create(address.getHostString(), address.getPort());
+      ServiceEndpoint localServiceEndpoint = ServiceScanner.scan(
+          // TODO: pass tags as well [sergeyr]
+          builder.services,
+          serviceAddress.host(),
+          serviceAddress.port(),
+          new HashMap<>());
+      // register and make them discover-able
+
+      serviceRegistry.registerService(localServiceEndpoint);
     } else {
       serviceAddress = Address.create("localhost", servicePort);
     }
-
-    ServiceEndpoint localServiceEndpoint = ServiceScanner.scan(
-        // TODO: pass tags as well [sergeyr]
-        builder.services,
-        serviceAddress.host(),
-        serviceAddress.port(),
-        new HashMap<>());
-    // register and make them discover-able
-
-    serviceRegistry = new ServiceRegistryImpl();
-    serviceRegistry.registerService(localServiceEndpoint);
-
     routerFactory = new RouterFactory(serviceRegistry);
-
     discovery = new ServiceDiscovery(serviceRegistry);
     discovery.start(clusterConfig);
   }
