@@ -105,33 +105,16 @@ import reactor.core.publisher.Mono;
  * }
  * </pre>
  */
-
 public class Microservices {
 
-
-  public static final int SERVICE_PORT = 5801;
-
   private final ServiceRegistry serviceRegistry;
-
   private final ClientTransport client;
-
   private final Metrics metrics;
-
   private final Address serviceAddress;
-
-  public final RouterFactory routerFactory;
-
   private final ServiceDiscovery discovery;
-
   private final ServerTransport server;
-
   private final LocalServiceDispatchers serviceDispatchers;
-
   private final List<Object> services;
-
-  private final int servicePort;
-
-  private final ClusterConfig.Builder clusterConfig;
 
   private Microservices(Builder builder) {
 
@@ -139,36 +122,29 @@ public class Microservices {
     this.metrics = builder.metrics;
     this.client = builder.client;
     this.server = builder.server;
-    this.clusterConfig = builder.clusterConfig;
-    this.servicePort = builder.servicePort;
 
     this.services = builder.services.stream().map(mapper -> mapper.serviceInstance).collect(Collectors.toList());
     this.serviceDispatchers = LocalServiceDispatchers.builder()
         .services(builder.services.stream().map(ServiceInfo::service).collect(Collectors.toList())).build();
 
-    if (services.size() > 0) {
-      server.accept(new DefaultServiceMessageAcceptor(serviceDispatchers));
-      InetSocketAddress address = server.bindAwait(new InetSocketAddress(Addressing.getLocalIpAddress(), servicePort));
-      serviceAddress = Address.create(address.getHostString(), address.getPort());
-    } else {
-      serviceAddress = Address.create("localhost", servicePort);
-    }
-
-    ServiceEndpoint localServiceEndpoint = ServiceScanner.scan(
-        // TODO: pass tags as well [sergeyr]
-        builder.services,
-        serviceAddress.host(),
-        serviceAddress.port(),
-        new HashMap<>());
-    // register and make them discover-able
+    server.accept(new DefaultServiceMessageAcceptor(serviceDispatchers));
+    InetSocketAddress socketAddress = new InetSocketAddress(Addressing.getLocalIpAddress(), builder.servicePort);
+    InetSocketAddress address = server.bindAwait(socketAddress);
+    serviceAddress = Address.create(address.getHostString(), address.getPort());
 
     serviceRegistry = new ServiceRegistryImpl();
-    serviceRegistry.registerService(localServiceEndpoint);
 
-    routerFactory = new RouterFactory(serviceRegistry);
+    if (services.size() > 0) {
+      // TODO: pass tags as well [sergeyr]
+      serviceRegistry.registerService(ServiceScanner.scan(
+          builder.services,
+          serviceAddress.host(),
+          serviceAddress.port(),
+          new HashMap<>()));
+    }
 
     discovery = new ServiceDiscovery(serviceRegistry);
-    discovery.start(clusterConfig);
+    discovery.start(builder.clusterConfig);
   }
 
   public Metrics metrics() {
@@ -198,8 +174,7 @@ public class Microservices {
      * @return Microservices instance.
      */
     public Microservices build() {
-      return Reflect.builder(new Microservices(this))
-          .inject();
+      return Reflect.builder(new Microservices(this)).inject();
     }
 
     public Builder server(ServerTransport server) {
@@ -266,13 +241,9 @@ public class Microservices {
     return this.serviceAddress;
   }
 
-  public Router router(Class<? extends Router> routerType) {
-    return routerFactory.getRouter(routerType);
-  }
-
   public Call call() {
-    Router router = this.router(RoundRobinServiceRouter.class);
-    return new ServiceCall(client, serviceDispatchers).call().metrics(metrics).router(router);
+    Router router = RouterFactory.getRouter(RoundRobinServiceRouter.class);
+    return new ServiceCall(client, serviceDispatchers, serviceRegistry).call().metrics(metrics).router(router);
   }
 
   public Mono<Void> shutdown() {
