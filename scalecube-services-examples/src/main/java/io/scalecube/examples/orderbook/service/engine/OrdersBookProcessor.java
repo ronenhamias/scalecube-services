@@ -10,15 +10,14 @@ import reactor.core.publisher.Flux;
 public class OrdersBookProcessor {
 
   private final EmitterProcessor<Order> inboundOrders = EmitterProcessor.<Order>create();
-
+  MatchingEngine orderBook = new MatchingEngine();
+  
+  
   public OrdersBookProcessor() {
     inboundOrders.subscribe(order -> {
       orderBook.enter(order.id(), order.level().side(), order.level().price(), order.remainingQuantity());
     });
   }
-
-  MatchingEngine orderBook = new MatchingEngine();
-  
   /**
    * Cancel a quantity of an order.
    *

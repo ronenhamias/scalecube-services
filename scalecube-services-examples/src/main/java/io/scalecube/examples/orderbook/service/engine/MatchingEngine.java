@@ -186,6 +186,8 @@ public class MatchingEngine {
       case SELL:
         asks.remove(level.price());
         break;
+      default:
+        // do nothing;
     }
   }
 

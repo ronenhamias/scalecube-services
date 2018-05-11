@@ -5,12 +5,6 @@ import java.util.Map;
 
 public class OrderBookSnapshoot {
 
-
-  @Override
-  public String toString() {
-    return "OrderBookSnapshoot [book=" + book + "]";
-  }
-
   Map<Long, Long> bids = new HashMap<Long, Long>();
 
   Map<Long, Long> asks = new HashMap<Long, Long>();
@@ -32,10 +26,11 @@ public class OrderBookSnapshoot {
   public OrderBookSnapshoot(OrderBook book) {
     this.book = book;
   }
+
   public OrderBook book() {
     return book;
   }
-  
+
   public Map<Long, Long> bids() {
     return bids;
   }
@@ -48,5 +43,8 @@ public class OrderBookSnapshoot {
     return currentPrice;
   }
 
-
+  @Override
+  public String toString() {
+    return "OrderBookSnapshoot [book=" + book + "]";
+  }
 }

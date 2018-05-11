@@ -36,7 +36,7 @@ public class OrderBooks {
   }
   
   public void enterOrder(Order order, String instrument) {
-    engines.get(instrument).enter(order);;
+    engines.get(instrument).enter(order);
   }
 
   public void cancel(Order order) {
