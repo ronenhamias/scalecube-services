@@ -1,7 +1,5 @@
 package io.scalecube.examples.orderbook.service.engine.events;
 
-import io.scalecube.examples.orderbook.service.engine.Side;
-
 public class AddOrder {
 
   long orderId;

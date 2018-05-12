@@ -22,7 +22,7 @@ public class Order {
     return id;
   }
 
-  public long remainingQuantity() {
+  public long size() {
     return remainingQuantity;
   }
 

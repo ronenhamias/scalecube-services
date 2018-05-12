@@ -1,10 +1,17 @@
 package io.scalecube.examples.orderbook.service.engine;
 
 import io.scalecube.examples.orderbook.service.engine.events.AddOrder;
+import io.scalecube.examples.orderbook.service.engine.events.CancelOrder;
+import io.scalecube.examples.orderbook.service.engine.events.MatchOrder;
+import io.scalecube.examples.orderbook.service.engine.events.Side;
 
-import it.unimi.dsi.fastutil.longs.Long2LongRBTreeMap;
+import java.util.Set;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.longs.LongComparators;
-import it.unimi.dsi.fastutil.longs.LongSortedSet;
+import reactor.core.publisher.EmitterProcessor;
+import reactor.core.publisher.Flux;
 
 /**
  * An order book.
@@ -13,115 +20,186 @@ public class OrderBook {
 
   private String instrument;
 
-  private Long2LongRBTreeMap bids;
-  private Long2LongRBTreeMap asks;
+  private Long2ObjectRBTreeMap<PriceLevel> bids;
+  private Long2ObjectRBTreeMap<PriceLevel> asks;
 
-  OrderBook(String instrument) {
-    this.instrument = instrument;
+  private Long2ObjectOpenHashMap<Order> orders;
 
-    this.bids = new Long2LongRBTreeMap(LongComparators.OPPOSITE_COMPARATOR);
-    this.asks = new Long2LongRBTreeMap(LongComparators.NATURAL_COMPARATOR);
+  EmitterProcessor<MatchOrder> matchListener = EmitterProcessor.<MatchOrder>create();
+  EmitterProcessor<AddOrder> addListener = EmitterProcessor.<AddOrder>create();
+  EmitterProcessor<CancelOrder> cancelListener = EmitterProcessor.<CancelOrder>create();
+
+  /**
+   * Create an order book.
+   *
+   * @param listener a listener for outbound events from the order book
+   */
+  public OrderBook() {
+    this.bids = new Long2ObjectRBTreeMap<>(LongComparators.OPPOSITE_COMPARATOR);
+    this.asks = new Long2ObjectRBTreeMap<>(LongComparators.NATURAL_COMPARATOR);
+    this.orders = new Long2ObjectOpenHashMap<>();
   }
 
   /**
-   * Get the instrument.
+   * Enter an order to this order book.
    *
-   * @return the instrument
-   */
-  public String getInstrument() {
-    return instrument;
-  }
-
-  /**
-   * Get the best bid price.
+   * <p>
+   * The incoming order is first matched against resting orders in this order book. This operation results in zero or
+   * more Match events.
+   * </p>
    *
-   * @return the best bid price or zero if there are no bids
-   */
-  public long getBestBidPrice() {
-    if (bids.isEmpty())
-      return 0;
-
-    return bids.firstLongKey();
-  }
-
-  /**
-   * Get the bid prices.
+   * <p>
+   * If the remaining quantity is not zero after the matching operation, the remaining quantity is added to this order
+   * book and an Add event is triggered.
+   * </p>
    *
-   * @return the bid prices
-   */
-  public LongSortedSet getBidPrices() {
-    return bids.keySet();
-  }
-
-  /**
-   * Get a bid level size.
+   * <p>
+   * If the order identifier is known, do nothing.
+   * </p>
    *
-   * @param price the bid price
-   * @return the bid level size
+   * @param orderId an order identifier
+   * @param side the side
+   * @param price the limit price
+   * @param size the size
    */
-  public long getBidSize(long price) {
-    return bids.get(price);
-  }
+  public void enter(long orderId, Side side, long price, long size) {
+    if (orders.containsKey(orderId))
+      return;
 
-  /**
-   * Get the best ask price.
-   *
-   * @return the best ask price or zero if there are no asks
-   */
-  public long getBestAskPrice() {
-    if (asks.isEmpty())
-      return 0;
-    return asks.firstLongKey();
-  }
-
-  /**
-   * Get the ask prices.
-   *
-   * @return the ask prices
-   */
-  public LongSortedSet getAskPrices() {
-    return asks.keySet();
-  }
-
-  /**
-   * Get an ask level size.
-   *
-   * @param price the ask price
-   * @return the ask level size
-   */
-  public long getAskSize(long price) {
-    return asks.get(price);
-  }
-
-  boolean add(Side side, long price, long quantity) {
-    Long2LongRBTreeMap levels = getLevels(side);
-    long size = levels.get(price);
-    levels.put(price, size + quantity);
-    return price == levels.firstLongKey();
-  }
-
-  boolean update(Side side, long price, long quantity) {
-    Long2LongRBTreeMap levels = getLevels(side);
-    long oldSize = levels.get(price);
-    long newSize = oldSize + quantity;
-    boolean onBestLevel = price == levels.firstLongKey();
-    if (newSize > 0)
-      levels.put(price, newSize);
+    if (side == Side.BUY)
+      buy(orderId, price, size);
     else
-      levels.remove(price);
-    return onBestLevel;
+      sell(orderId, price, size);
   }
 
-  private Long2LongRBTreeMap getLevels(Side side) {
-    return side == Side.BUY ? bids : asks;
+  private void buy(long orderId, long price, long size) {
+    long remainingQuantity = size;
+
+    PriceLevel bestLevel = getBestLevel(asks);
+
+    while (remainingQuantity > 0 && bestLevel != null && bestLevel.price() <= price) {
+      remainingQuantity = bestLevel.match(orderId, Side.BUY, remainingQuantity, matchListener);
+
+      if (bestLevel.isEmpty())
+        asks.remove(bestLevel.price());
+
+      bestLevel = getBestLevel(asks);
+    }
+
+    if (remainingQuantity > 0) {
+      orders.put(orderId, add(bids, orderId, Side.BUY, price, remainingQuantity));
+
+      addListener.onNext(new AddOrder(orderId, Side.BUY, price, remainingQuantity));
+    }
   }
 
-  public void add(AddOrder order) {
-    this.add(order.side(), order.price(), order.quantity());
+  private void sell(long orderId, long price, long size) {
+    long remainingQuantity = size;
+    PriceLevel bestLevel = getBestLevel(bids);
+    while (remainingQuantity > 0 && bestLevel != null && bestLevel.price() >= price) {
+      remainingQuantity = bestLevel.match(orderId, Side.SELL, remainingQuantity, matchListener);
+      if (bestLevel.isEmpty())
+        bids.remove(bestLevel.price());
+      bestLevel = getBestLevel(bids);
+    }
+
+    if (remainingQuantity > 0) {
+      orders.put(orderId, add(asks, orderId, Side.SELL, price, remainingQuantity));
+      addListener.onNext(new AddOrder(orderId, Side.SELL, price, remainingQuantity));
+    }
+  }
+
+  /**
+   * Cancel a quantity of an order in this order book. The size refers to the new order size. If the new order size is
+   * set to zero, the order is deleted from this order book.
+   *
+   * <p>
+   * A Cancel event is triggered.
+   * </p>
+   *
+   * <p>
+   * If the order identifier is unknown, do nothing.
+   * </p>
+   *
+   * @param orderId the order identifier
+   * @param size the new size
+   */
+  public void cancel(long orderId, long size) {
+    Order order = orders.get(orderId);
+    if (order == null)
+      return;
+
+    long remainingQuantity = order.size();
+
+    if (size >= remainingQuantity)
+      return;
+
+    if (size > 0) {
+      order.resize(size);
+    } else {
+      delete(order);
+      orders.remove(orderId);
+    }
+
+    cancelListener.onNext(new CancelOrder(orderId, remainingQuantity - size, size));
+  }
+
+  private PriceLevel getBestLevel(Long2ObjectRBTreeMap<PriceLevel> levels) {
+    if (levels.isEmpty())
+      return null;
+
+    return levels.get(levels.firstLongKey());
+  }
+
+  private Order add(Long2ObjectRBTreeMap<PriceLevel> levels, long orderId, Side side, long price, long size) {
+    PriceLevel level = levels.get(price);
+    if (level == null) {
+      level = new PriceLevel(side, price);
+      levels.put(price, level);
+    }
+
+    return level.add(orderId, size);
+  }
+
+  private void delete(Order order) {
+    PriceLevel level = order.level();
+
+    level.delete(order);
+
+    if (level.isEmpty())
+      delete(level);
+  }
+
+  private void delete(PriceLevel level) {
+    switch (level.side()) {
+      case BUY:
+        bids.remove(level.price());
+        break;
+      case SELL:
+        asks.remove(level.price());
+        break;
+    }
   }
 
   @Override
   public String toString() {
     return "OrderBook [instrument=" + instrument + ", bids=" + bids + ", asks=" + asks + "]";
   }
+
+  public Flux<AddOrder> addListener() {
+    return this.addListener;
+  }
+
+  public Flux<MatchOrder> matchListener() {
+    return matchListener;
+  }
+
+  public Set getAskPrices() {
+    return this.asks.keySet();
+  }
+
+  public Set getBidPrices() {
+    return this.bids.keySet();
+  }
+
 }

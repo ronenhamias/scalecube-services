@@ -1,6 +1,7 @@
 package io.scalecube.examples.orderbook.service.engine;
 
-import io.scalecube.examples.orderbook.service.engine.events.Match;
+import io.scalecube.examples.orderbook.service.engine.events.MatchOrder;
+import io.scalecube.examples.orderbook.service.engine.events.Side;
 
 import java.util.ArrayList;
 
@@ -38,18 +39,18 @@ public class PriceLevel {
     return order;
   }
 
-  public long match(long orderId, Side side, long quantity, EmitterProcessor<Match> matchEmmiter) {
+  public long match(long orderId, Side side, long quantity, EmitterProcessor<MatchOrder> matchEmmiter) {
     while (quantity > 0 && !orders.isEmpty()) {
       Order order = orders.get(0);
-      long orderQuantity = order.remainingQuantity();
+      long orderQuantity = order.size();
       if (orderQuantity > quantity) {
-        order.reduce(quantity);
-        matchEmmiter.onNext(new Match(order.id(), orderId, side, price, quantity, order.remainingQuantity()));
-        quantity = 0;
+          order.reduce(quantity);
+          matchEmmiter.onNext(new MatchOrder(order.id(), orderId, side, price, quantity, order.size()));
+          quantity = 0;
       } else {
-        orders.remove(0);
-        matchEmmiter.onNext(new Match(order.id(), orderId, side, price, orderQuantity, 0));
-        quantity -= orderQuantity;
+          orders.remove(0);
+          matchEmmiter.onNext(new MatchOrder(order.id(), orderId, side, price, orderQuantity, 0));
+          quantity -= orderQuantity;
       }
     }
     return quantity;

@@ -51,10 +51,9 @@ public class LocalServiceDispatchers {
         Reflect.serviceMethods(serviceInterface).forEach((key, method) -> {
 
           String qualifier = Reflect.qualifier(serviceInterface, method);
-          Class<?> parameterizedReturnType = Reflect.parameterizedReturnType(method);
           Class<?> returnType = method.getReturnType();
 
-          if (returnType.isAssignableFrom(Mono.class) && parameterizedReturnType.isAssignableFrom(Void.class)) {
+          if (returnType.isAssignableFrom(Void.class)) {
             register(qualifier, new FireAndForgetDispatcher(qualifier, service, method));
 
           } else if (returnType.isAssignableFrom(Mono.class)) {

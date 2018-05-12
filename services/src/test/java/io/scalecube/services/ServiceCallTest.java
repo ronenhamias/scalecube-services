@@ -120,10 +120,11 @@ public class ServiceCallTest extends BaseTest {
 
     // When
     AtomicReference<SignalType> success = new AtomicReference<>();
-    gateway.call().oneWay(GREETING_VOID_REQ)
-        .doFinally(success::set)
+    Mono.from(gateway.call().requestOne(GREETING_VOID_REQ))
         .timeout(Duration.ofSeconds(TIMEOUT))
-        .block();
+        .subscribe(consumer->{
+          signal.countDown();
+        });
 
     // Then:
     signal.await(2, TimeUnit.SECONDS);

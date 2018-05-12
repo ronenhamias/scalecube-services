@@ -62,7 +62,7 @@ import reactor.core.publisher.Mono;
  * </ul>
  *
  * <b>basic usage example:</b>
- *
+ *an
  * <pre>
  * {@code
  *    // Define a service interface and implement it:
@@ -90,18 +90,11 @@ import reactor.core.publisher.Mono;
  *         .api(GreetingService.class);
  *
  *     // Invoke the greeting service async:
- *     Mono<String> future = service.sayHello("joe");
- *
- *     // handle completable success or error:
- *     future.whenComplete((result, ex) -> {
- *      if (ex == null) {
- *        // print the greeting:
- *         System.out.println(result);
- *       } else {
+ *     service.sayHello("joe").subscribe(result->{
  *         // print the greeting:
- *         System.out.println(ex);
- *       }
+ *         System.out.println(result);
  *     });
+ *
  * }
  * </pre>
  */

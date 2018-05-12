@@ -1,4 +1,4 @@
-package io.scalecube.examples.orderbook.service.engine;
+package io.scalecube.examples.orderbook.service.engine.events;
 
 /**
  * The order side.
