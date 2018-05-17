@@ -18,12 +18,14 @@ import org.reactivestreams.Publisher;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public class RemoteServiceTest extends BaseTest {
@@ -446,6 +448,37 @@ public class RemoteServiceTest extends BaseTest {
         .startAwait();
 
     assertTrue(ms.cluster().member().metadata().containsKey("HOSTNAME"));
+  }
+
+  @Test
+  void testRemoteBidirectional() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+            .discoveryPort(port.incrementAndGet())
+            .services(new GreetingServiceImpl())
+            .build()
+            .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+            .discoveryPort(port.incrementAndGet())
+            .seeds(provider.cluster().address())
+            .build()
+            .startAwait();
+
+    // get a proxy to the service api.
+    GreetingService service = createProxy(consumer);
+
+    // call the service.
+    int cnt = 10;
+    Flux<GreetingRequest> requests = Flux.range(0, cnt).map(Integer::toHexString).map(GreetingRequest::new);
+    Flux<GreetingResponse> responses = service.greetingStream(requests);
+
+    List<GreetingResponse> block = responses.take(cnt).collectList().block();
+    assertEquals(cnt, block.size(), "Didn't receive all the responses");
+
+    provider.shutdown().block();
+    consumer.shutdown().block();
   }
 
   private GreetingService createProxy(Microservices micro) {

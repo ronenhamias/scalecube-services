@@ -4,6 +4,7 @@ import io.scalecube.services.annotations.Service;
 import io.scalecube.services.annotations.ServiceMethod;
 import io.scalecube.services.api.ServiceMessage;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -38,4 +39,7 @@ interface GreetingService {
 
   @ServiceMethod
   Mono<GreetingResponse> exceptionRequest(GreetingRequest request);
+
+  @ServiceMethod
+  Flux<GreetingResponse> greetingStream(Flux<GreetingRequest> requestFlux);
 }

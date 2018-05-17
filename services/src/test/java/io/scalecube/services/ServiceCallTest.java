@@ -54,7 +54,7 @@ public class ServiceCallTest extends BaseTest {
 
     // call the service.
     Publisher<ServiceMessage> future =
-        serviceCall.requestOne(GREETING_NO_PARAMS_REQUEST);
+        serviceCall.requestResponse(GREETING_NO_PARAMS_REQUEST);
 
     ServiceMessage message = Mono.from(future).block(Duration.ofSeconds(TIMEOUT));
 
@@ -95,7 +95,7 @@ public class ServiceCallTest extends BaseTest {
 
     // call the service.
     Publisher<ServiceMessage> future =
-        serviceCall.requestOne(GREETING_NO_PARAMS_REQUEST, GreetingResponse.class);
+        serviceCall.requestResponse(GREETING_NO_PARAMS_REQUEST, GreetingResponse.class);
 
     ServiceMessage message = Mono.from(future).block(timeout);
 
@@ -121,7 +121,7 @@ public class ServiceCallTest extends BaseTest {
 
     // When
     AtomicReference<SignalType> success = new AtomicReference<>();
-    gateway.call().oneWay(GREETING_VOID_REQ)
+    gateway.call().fireAndForget(GREETING_VOID_REQ)
         .doFinally(success::set)
         .timeout(Duration.ofSeconds(TIMEOUT))
         .block();
@@ -150,7 +150,7 @@ public class ServiceCallTest extends BaseTest {
 
     // When
     Throwable exception = assertThrows(ServiceException.class,
-        () -> Mono.from(gateway.call().requestOne(GREETING_FAIL_REQ)).block(timeout));
+        () -> Mono.from(gateway.call().requestResponse(GREETING_FAIL_REQ)).block(timeout));
     assertEquals("GreetingRequest{name='joe'}", exception.getMessage());
 
     gateway.shutdown().block();
@@ -170,7 +170,7 @@ public class ServiceCallTest extends BaseTest {
 
     // When
     Throwable exception = assertThrows(ServiceException.class,
-        () -> Mono.from(gateway.call().requestOne(GREETING_ERROR_REQ)).block(timeout));
+        () -> Mono.from(gateway.call().requestResponse(GREETING_ERROR_REQ)).block(timeout));
     assertEquals("GreetingRequest{name='joe'}", exception.getMessage());
     gateway.shutdown().block();
     node1.shutdown().block();
@@ -184,7 +184,7 @@ public class ServiceCallTest extends BaseTest {
 
     // WHEN
     AtomicReference<SignalType> success = new AtomicReference<>();
-    node.call().oneWay(GREETING_VOID_REQ).doFinally(success::set).block(Duration.ofSeconds(TIMEOUT));
+    node.call().fireAndForget(GREETING_VOID_REQ).doFinally(success::set).block(Duration.ofSeconds(TIMEOUT));
 
     // Then:
     signal.await(2, TimeUnit.SECONDS);
@@ -204,7 +204,7 @@ public class ServiceCallTest extends BaseTest {
 
     // call the service.
     Throwable exception =
-        assertThrows(ServiceException.class, () -> Mono.from(node.call().requestOne(GREETING_FAIL_REQ)).block(timeout));
+        assertThrows(ServiceException.class, () -> Mono.from(node.call().requestResponse(GREETING_FAIL_REQ)).block(timeout));
     assertEquals("GreetingRequest{name='joe'}", exception.getMessage());
 
     node.shutdown().block();
@@ -217,7 +217,7 @@ public class ServiceCallTest extends BaseTest {
 
     // call the service.
     Throwable exception = assertThrows(ServiceException.class,
-        () -> Mono.from(node.call().requestOne(GREETING_ERROR_REQ)).block(timeout));
+        () -> Mono.from(node.call().requestResponse(GREETING_ERROR_REQ)).block(timeout));
 
     node.shutdown().block();
   }
@@ -234,7 +234,7 @@ public class ServiceCallTest extends BaseTest {
         .build()
         .startAwait();
 
-    Publisher<ServiceMessage> resultFuture = consumer.call().requestOne(GREETING_REQ);
+    Publisher<ServiceMessage> resultFuture = consumer.call().requestResponse(GREETING_REQ);
 
     // Then
     ServiceMessage result = Mono.from(resultFuture).block(Duration.ofSeconds(TIMEOUT));
@@ -253,7 +253,7 @@ public class ServiceCallTest extends BaseTest {
 
     // When
     Publisher<ServiceMessage> resultFuture =
-        microservices.call().requestOne(GREETING_REQUEST_REQ);
+        microservices.call().requestResponse(GREETING_REQUEST_REQ);
 
     // Then
     ServiceMessage result = Mono.from(resultFuture).block(Duration.ofSeconds(TIMEOUT));
@@ -276,7 +276,7 @@ public class ServiceCallTest extends BaseTest {
 
     // When
     Publisher<ServiceMessage> result =
-        consumer.call().requestOne(GREETING_REQUEST_REQ, GreetingResponse.class);
+        consumer.call().requestResponse(GREETING_REQUEST_REQ, GreetingResponse.class);
 
     // Then
     GreetingResponse greeting = Mono.from(result).block(Duration.ofSeconds(TIMEOUT)).data();
@@ -294,7 +294,7 @@ public class ServiceCallTest extends BaseTest {
 
     // call the service.
     Publisher<ServiceMessage> future =
-        service.requestOne(GREETING_REQUEST_TIMEOUT_REQ);
+        service.requestResponse(GREETING_REQUEST_TIMEOUT_REQ);
 
     Throwable exception = assertThrows(RuntimeException.class, () -> {
       try {
@@ -322,7 +322,7 @@ public class ServiceCallTest extends BaseTest {
 
     // call the service.
     Publisher<ServiceMessage> future =
-        service.requestOne(GREETING_REQUEST_TIMEOUT_REQ);
+        service.requestResponse(GREETING_REQUEST_TIMEOUT_REQ);
     Throwable exception = assertThrows(RuntimeException.class, () -> Mono.from(future).block(Duration.ofSeconds(1)));
     assertTrue(exception.getMessage().contains("Timeout on blocking read"));
 
@@ -342,7 +342,7 @@ public class ServiceCallTest extends BaseTest {
 
     // call the service.
     Publisher<ServiceMessage> future =
-        service.requestOne(GREETING_REQUEST_REQ);
+        service.requestResponse(GREETING_REQUEST_REQ);
 
 
     CountDownLatch timeLatch = new CountDownLatch(1);
@@ -374,7 +374,7 @@ public class ServiceCallTest extends BaseTest {
 
     // call the service.
     Publisher<ServiceMessage> future =
-        service.requestOne(GREETING_REQUEST_REQ);
+        service.requestResponse(GREETING_REQUEST_REQ);
 
     Mono.from(future).doOnNext(result -> {
       // print the greeting.
@@ -412,9 +412,9 @@ public class ServiceCallTest extends BaseTest {
 
     // call the service.
     GreetingResponse result1 =
-        Mono.from(service.requestOne(GREETING_REQUEST_REQ, GreetingResponse.class)).timeout(timeout).block().data();
+        Mono.from(service.requestResponse(GREETING_REQUEST_REQ, GreetingResponse.class)).timeout(timeout).block().data();
     GreetingResponse result2 =
-        Mono.from(service.requestOne(GREETING_REQUEST_REQ, GreetingResponse.class)).timeout(timeout).block().data();
+        Mono.from(service.requestResponse(GREETING_REQUEST_REQ, GreetingResponse.class)).timeout(timeout).block().data();
 
     assertTrue(!result1.sender().equals(result2.sender()));
     provider2.shutdown().block();
@@ -449,7 +449,7 @@ public class ServiceCallTest extends BaseTest {
     // call the service.
     for (int i = 0; i < 1e3; i++) {
       GreetingResponse result =
-          Mono.from(service.requestOne(GREETING_REQUEST_REQ, GreetingResponse.class)).timeout(timeout).block().data();
+          Mono.from(service.requestResponse(GREETING_REQUEST_REQ, GreetingResponse.class)).timeout(timeout).block().data();
       assertEquals("2", result.sender());
     }
     provider2.shutdown().block();
@@ -484,9 +484,9 @@ public class ServiceCallTest extends BaseTest {
     // call the service.
     for (int i = 0; i < 1e3; i++) {
       GreetingResponse resultForFransin =
-          Mono.from(service.requestOne(GREETING_REQUEST_REQ2, GreetingResponse.class)).timeout(timeout).block().data();
+          Mono.from(service.requestResponse(GREETING_REQUEST_REQ2, GreetingResponse.class)).timeout(timeout).block().data();
       GreetingResponse resultForJoe =
-          Mono.from(service.requestOne(GREETING_REQUEST_REQ, GreetingResponse.class)).timeout(timeout).block().data();
+          Mono.from(service.requestResponse(GREETING_REQUEST_REQ, GreetingResponse.class)).timeout(timeout).block().data();
       assertEquals("1", resultForJoe.sender());
       assertEquals("2", resultForFransin.sender());
     }
@@ -507,7 +507,7 @@ public class ServiceCallTest extends BaseTest {
     CountDownLatch timeLatch = new CountDownLatch(1);
     try {
       // call the service.
-      Mono.from(service.requestOne(NOT_FOUND_REQ)).block(timeout);
+      Mono.from(service.requestResponse(NOT_FOUND_REQ)).block(timeout);
       fail("Expected no-service-found exception");
     } catch (Exception ex) {
       assertTrue(ex.getMessage().equals("No reachable member with such service: " + NOT_FOUND_REQ.qualifier()));
@@ -552,7 +552,7 @@ public class ServiceCallTest extends BaseTest {
     int n = (int) 1e3;
     CountDownLatch timeLatch = new CountDownLatch(n);
     for (int i = 0; i < n; i++) {
-      Mono<ServiceMessage> response = service.requestOne(req);
+      Mono<ServiceMessage> response = service.requestResponse(req);
       response.doOnNext(message -> {
         timeLatch.countDown();
         if (message.data().toString().contains("SERVICE_B_TALKING")) {
@@ -586,7 +586,7 @@ public class ServiceCallTest extends BaseTest {
         .build()
         .startAwait();
 
-    Publisher<ServiceMessage> result = gateway.call().requestOne(GREETING_REQUEST_REQ, GreetingResponse.class);
+    Publisher<ServiceMessage> result = gateway.call().requestResponse(GREETING_REQUEST_REQ, GreetingResponse.class);
 
     GreetingResponse greetings = Mono.from(result).block(Duration.ofSeconds(TIMEOUT)).data();
     System.out.println("greeting_request_completes_before_timeout : " + greetings.getResult());
@@ -606,7 +606,7 @@ public class ServiceCallTest extends BaseTest {
 
     Call service = gateway.call();
 
-    Publisher<ServiceMessage> result = service.requestOne(GREETING_REQUEST_REQ, GreetingResponse.class);
+    Publisher<ServiceMessage> result = service.requestResponse(GREETING_REQUEST_REQ, GreetingResponse.class);
 
     GreetingResponse greetings = Mono.from(result).timeout(Duration.ofSeconds(TIMEOUT)).block().data();
     System.out.println("1. greeting_request_completes_before_timeout : " + greetings.getResult());

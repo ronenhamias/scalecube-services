@@ -149,7 +149,7 @@ public class StreamingServiceTest extends BaseTest {
     Call service = gateway.call();
 
     CountDownLatch latch1 = new CountDownLatch(batchSize);
-    Disposable sub1 = Flux.from(service.requestMany(Messages.builder()
+    Disposable sub1 = Flux.from(service.requestStream(Messages.builder()
         .request(QuoteService.NAME, "snapshot")
         .data(batchSize)
         .build()))
@@ -203,7 +203,7 @@ public class StreamingServiceTest extends BaseTest {
     final CountDownLatch latch1 = new CountDownLatch(batchSize);
     ServiceMessage justOne = Messages.builder().request(QuoteService.NAME, "justOne").build();
 
-    Flux.from(service.requestOne(justOne)).subscribe(onNext -> latch1.countDown());
+    Flux.from(service.requestResponse(justOne)).subscribe(onNext -> latch1.countDown());
 
     latch1.await(2, TimeUnit.SECONDS);
     assertTrue(latch1.getCount() == 0);
@@ -230,7 +230,7 @@ public class StreamingServiceTest extends BaseTest {
     ServiceMessage scheduled = Messages.builder().request(QuoteService.NAME, "scheduled")
         .data(1000).build();
 
-    sub1.set(Flux.from(service.requestMany(scheduled)).subscribe(onNext -> {
+    sub1.set(Flux.from(service.requestStream(scheduled)).subscribe(onNext -> {
       sub1.get().isDisposed();
       latch1.countDown();
 
@@ -262,7 +262,7 @@ public class StreamingServiceTest extends BaseTest {
 
     ServiceMessage scheduled = Messages.builder().request(QuoteService.NAME, "unknonwn").build();
     try {
-      service.requestMany(scheduled).blockFirst(Duration.ofSeconds(3));
+      service.requestStream(scheduled).blockFirst(Duration.ofSeconds(3));
     } catch (Exception ex) {
       if (ex.getMessage().contains("No reachable member with such service")) {
         latch1.countDown();
@@ -297,7 +297,7 @@ public class StreamingServiceTest extends BaseTest {
     AtomicReference<Disposable> sub1 = new AtomicReference<>(null);
     ServiceMessage justOne = Messages.builder().request(QuoteService.NAME, "justOne").build();
 
-    sub1.set(Flux.from(service.requestMany(justOne)).subscribe(System.out::println));
+    sub1.set(Flux.from(service.requestStream(justOne)).subscribe(System.out::println));
 
     gateway.cluster().listenMembership()
         .filter(MembershipEvent::isRemoved)

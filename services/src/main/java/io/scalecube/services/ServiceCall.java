@@ -24,6 +24,11 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.lang.reflect.Method;
+import java.util.function.BiFunction;
+
+import static io.scalecube.services.CommunicationMode.REQUEST_CHANNEL;
+
 public class ServiceCall {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ServiceCall.class);
@@ -54,6 +59,10 @@ public class ServiceCall {
     private final ClientTransport transport;
     private final LocalServiceHandlers serviceHandlers;
     private final ServiceRegistry serviceRegistry;
+    private BiFunction<Class<T>, Method, ServiceMessage> callToMessage = (tClass, method1) -> ServiceMessage.builder()
+            .qualifier(Reflect.serviceName(tClass), method1.getName())
+            .data(method1.getParameterCount() != 0 ? args[0] : NullData.NULL_DATA)
+            .build();;
 
     public Call(ClientTransport transport, LocalServiceHandlers serviceHandlers, ServiceRegistry serviceRegistry) {
       this.transport = transport;
@@ -88,8 +97,8 @@ public class ServiceCall {
      * @param request request message to send.
      * @return mono publisher completing normally or with error.
      */
-    public Mono<Void> oneWay(ServiceMessage request) {
-      return requestOne(request).map(message -> null);
+    public Mono<Void> fireAndForget(ServiceMessage request) {
+      return requestResponse(request).map(message -> null);
     }
 
     /**
@@ -98,7 +107,7 @@ public class ServiceCall {
      * @param request request message to send.
      * @return mono publisher completing with single response message or with error.
      */
-    public Mono<ServiceMessage> requestOne(ServiceMessage request) {
+    public Mono<ServiceMessage> requestResponse(ServiceMessage request) {
       return requestBidirectional(Mono.just(request)).as(Mono::from);
     }
 
@@ -108,7 +117,7 @@ public class ServiceCall {
      * @param request request message to send.
      * @return mono publisher completing with single response message or with error.
      */
-    public Mono<ServiceMessage> requestOne(ServiceMessage request, Class<?> returnType) {
+    public Mono<ServiceMessage> requestResponse(ServiceMessage request, Class<?> returnType) {
       return requestBidirectional(Mono.just(request), returnType).as(Mono::from);
     }
 
@@ -118,7 +127,7 @@ public class ServiceCall {
      * @param request request with given headers.
      * @return {@link Publisher} with service call dispatching result.
      */
-    public Flux<ServiceMessage> requestMany(ServiceMessage request) {
+    public Flux<ServiceMessage> requestStream(ServiceMessage request) {
       return requestBidirectional(Mono.just(request));
     }
 
@@ -186,6 +195,8 @@ public class ServiceCall {
         Class<?> parameterizedReturnType = Reflect.parameterizedReturnType(method);
         CommunicationMode mode = Reflect.communicationMode(method);
 
+        Flux<ServiceMessage> pub = Flux.empty();
+
         ServiceMessage request = ServiceMessage.builder()
             .qualifier(Reflect.serviceName(serviceInterface), method.getName())
             .data(method.getParameterCount() != 0 ? args[0] : NullData.NULL_DATA)
@@ -193,17 +204,17 @@ public class ServiceCall {
 
         switch (mode) {
           case FIRE_AND_FORGET:
-            return serviceCall.oneWay(request);
+            return serviceCall.fireAndForget(request);
           case REQUEST_RESPONSE:
-            return serviceCall.requestOne(request, parameterizedReturnType)
+            return serviceCall.requestResponse(request, parameterizedReturnType)
                 .transform(mono -> parameterizedReturnType.equals(ServiceMessage.class) ? mono
                     : mono.map(ServiceMessage::data));
           case REQUEST_STREAM:
-            return serviceCall.requestMany(request)
+            return serviceCall.requestStream(request)
                 .transform(flux -> parameterizedReturnType.equals(ServiceMessage.class) ? flux
                     : flux.map(ServiceMessage::data));
           case REQUEST_CHANNEL:
-            // falls to default
+            return serviceCall.requestBidirectional(request);
           default:
             throw new IllegalArgumentException("Communication mode is not supported: " + method);
         }

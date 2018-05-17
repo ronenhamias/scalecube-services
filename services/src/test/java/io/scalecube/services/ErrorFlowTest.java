@@ -45,28 +45,28 @@ public class ErrorFlowTest {
   @Test
   public void testCorruptedRequest() {
     Publisher<ServiceMessage> req = consumer
-        .call().requestOne(TestRequests.GREETING_CORRUPTED_PAYLOAD_REQUEST);
+        .call().requestResponse(TestRequests.GREETING_CORRUPTED_PAYLOAD_REQUEST);
     assertThrows(BadRequestException.class, () -> from(req).block());
   }
 
   @Test
   public void testNotAuthorized() {
     Publisher<ServiceMessage> req = consumer
-        .call().requestOne(TestRequests.GREETING_UNAUTHORIZED_REQUEST);
+        .call().requestResponse(TestRequests.GREETING_UNAUTHORIZED_REQUEST);
     assertThrows(UnauthorizedException.class, () -> from(req).block());
   }
 
   @Test
   public void testNullRequestPayload() {
     Publisher<ServiceMessage> req = consumer
-        .call().requestOne(TestRequests.GREETING_NULL_PAYLOAD);
+        .call().requestResponse(TestRequests.GREETING_NULL_PAYLOAD);
     assertThrows(BadRequestException.class, () -> from(req).block());
   }
 
   @Test
   public void testServiceUnavailable() {
     Publisher<ServiceMessage> req = consumer
-        .call().requestOne(TestRequests.NOT_FOUND_REQ);
+        .call().requestResponse(TestRequests.NOT_FOUND_REQ);
     assertThrows(ServiceUnavailableException.class, () -> from(req).block());
   }
 }
