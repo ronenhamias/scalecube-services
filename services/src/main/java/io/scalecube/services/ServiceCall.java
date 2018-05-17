@@ -56,14 +56,15 @@ public class ServiceCall {
     private Router router;
     private Metrics metrics;
     private Timer latency;
+    private ResponseMapper responseMapper = DefaultResponseMapper.DEFAULT_INSTANCE;
+    
+    
     private ClientTransport transport;
     private ServiceMessageDataCodec dataCodec;
     private LocalServiceHandlers serviceHandlers;
     private final ServiceRegistry serviceRegistry;
 
-    public Call(ClientTransport transport,
-        LocalServiceHandlers serviceHandlers,
-        ServiceRegistry serviceRegistry) {
+    public Call(ClientTransport transport, LocalServiceHandlers serviceHandlers, ServiceRegistry serviceRegistry) {
       this.transport = transport;
       this.serviceRegistry = serviceRegistry;
       this.dataCodec = new ServiceMessageDataCodec();
@@ -81,43 +82,41 @@ public class ServiceCall {
       return this;
     }
 
+    public Call responseMapper(ResponseMapper responseMapper) {
+      this.responseMapper = responseMapper;
+      return this;
+    }
+
     /**
      * Issues fire-and-rorget request.
      *
-     * @param request request to send.
-     * @return Mono of type Void.
+     * @param request request message to send.
+     * @return mono publisher completing normally or with error.
      */
     public Mono<Void> oneWay(ServiceMessage request) {
-      return requestOne(request).map(message -> null);
+      return requestOne(request).flatMap(message -> Mono.empty());
     }
 
-    /**
-     * Invoke a request message and invoke a service by a given service name and method name. expected headers in
-     * request: ServiceHeaders.SERVICE_REQUEST the logical name of the service. ServiceHeaders.METHOD the method name to
-     * invoke message uses the router to select the target endpoint service instance in the cluster. Throws Exception in
-     * case of an error or TimeoutException if no response if a given duration.
+   /**
+     * Issues request-and-reply request.
      *
-     * @param request request with given headers.
-     * @return {@link Publisher} with service call dispatching result.
+     * @param request request message to send.
+     * @return mono publisher completing with single response message or with error.
      */
     public Mono<ServiceMessage> requestOne(ServiceMessage request) {
-      return requestOne(request, request.responseType() != null ? request.responseType() : Object.class);
+      return requestBidirectional(Mono.just(request)).as(Mono::from);
     }
 
     /**
-     * Invoke a request message and invoke a service by a given service name and method name. expected headers in
-     * request: ServiceHeaders.SERVICE_REQUEST the logical name of the service. ServiceHeaders.METHOD the method name to
-     * invoke message uses the router to select the target endpoint service instance in the cluster. Throws Exception in
-     * case of an error or TimeoutException if no response if a given duration.
+     * Issues request-and-reply request.
      *
-     * @param request request with given headers.
-     * @param returnType return type of service message response.
-     * @return {@link Publisher} with service call dispatching result.
+     * @param request request message to send.
+     * @return mono publisher completing with single response message or with error.
      */
-    public Mono<ServiceMessage> requestOne(ServiceMessage request, final Class<?> returnType) {
-      return requestMany(request, returnType).as(Mono::from);
+    public Mono<ServiceMessage> requestOne(ServiceMessage request, Class<?> returnType) {
+      return requestChannel(Flux.just(request), returnType).as(Mono::from);
     }
-    
+
     /**
      * Issues request to service which returns stream of service messages back.
      *
@@ -125,40 +124,11 @@ public class ServiceCall {
      * @return {@link Publisher} with service call dispatching result.
      */
     public Flux<ServiceMessage> requestMany(ServiceMessage request) {
-      final Class<?> returnType = request.responseType() != null ? request.responseType() : Object.class;
-      return requestMany(request, returnType);
-
+      return requestChannel(Flux.just(request), Object.class);
     }
 
-    /**
-     * Issues request to service which returns stream of service messages back.
-     *
-     * @param request request with given headers.
-     * @return {@link Publisher} with service call dispatching result.
-     */
-    public Flux<ServiceMessage> requestMany(ServiceMessage request, Class<?> returnType) {
-      Messages.validate().serviceRequest(request);
-      String qualifier = request.qualifier();
-      if (serviceHandlers.contains(qualifier)) {
-        return Flux.from(serviceHandlers.get(qualifier).invoke(Mono.just(request)))
-            .onErrorMap(ExceptionProcessor::mapException);
-      } else {
-        ServiceReference serviceReference =
-            router.route(serviceRegistry, request).orElseThrow(() -> noReachableMemberException(request));
-        
-        Address address =
-            Address.create(serviceReference.host(), serviceReference.port());
-        
-        return transport.create(address)
-            .requestBidirectional(Flux.just(request))
-            .map(message -> {
-              if (ExceptionProcessor.isError(message)) {
-                throw ExceptionProcessor.toException(dataCodec.decode(message, ErrorData.class));
-              } else {
-                return dataCodec.decode(message, returnType);
-              }
-            });
-      }
+    public Flux<ServiceMessage> requestBidirectional(Publisher<ServiceMessage> publisher) {
+      return requestChannel(Flux.from(publisher), Object.class);
     }
     
     
@@ -169,7 +139,6 @@ public class ServiceCall {
      * @return {@link Publisher} with service call dispatching result.
      */
     public Flux<ServiceMessage> requestChannel(Flux<ServiceMessage> request, Class<?> returnType) {
-      
      
       Tuple2<Flux<ServiceMessage>, Flux<ServiceMessage>> headAndTail = Tuples.of(request.take(1), request);
       CountDownLatch latch = new CountDownLatch(1);
