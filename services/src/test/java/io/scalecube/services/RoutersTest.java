@@ -1,12 +1,12 @@
 package io.scalecube.services;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.scalecube.services.routing.RandomServiceRouter;
 import io.scalecube.services.routing.Router;
 import io.scalecube.services.routing.Routers;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class RoutersTest extends BaseTest {
 
