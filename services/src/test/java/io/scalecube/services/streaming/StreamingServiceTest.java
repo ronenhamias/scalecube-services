@@ -1,8 +1,9 @@
 package io.scalecube.services.streaming;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.scalecube.cluster.membership.MembershipEvent;
 import io.scalecube.services.BaseTest;
 import io.scalecube.services.Messages;
 import io.scalecube.services.Microservices;
@@ -11,7 +12,7 @@ import io.scalecube.services.api.ServiceMessage;
 
 import com.codahale.metrics.MetricRegistry;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -26,7 +27,7 @@ public class StreamingServiceTest extends BaseTest {
 
   private MetricRegistry registry = new MetricRegistry();
   private static AtomicInteger port = new AtomicInteger(6000);
-  
+
   @Test
   public void test_quotes() throws InterruptedException {
     QuoteService service = new SimpleQuoteService();
@@ -148,7 +149,7 @@ public class StreamingServiceTest extends BaseTest {
     Call service = gateway.call();
 
     CountDownLatch latch1 = new CountDownLatch(batchSize);
-    Disposable sub1 = Flux.from(service.requestMany(Messages.builder()
+    Disposable sub1 = Flux.from(service.requestStream(Messages.builder()
         .request(QuoteService.NAME, "snapshot")
         .data(batchSize)
         .build()))
@@ -163,8 +164,7 @@ public class StreamingServiceTest extends BaseTest {
   }
 
   @Test
-  public void test_just_once() throws InterruptedException {
-    int batchSize = 1;
+  public void test_just_once() {
     Microservices gateway = Microservices.builder()
         .discoveryPort(port.incrementAndGet())
         .build()
@@ -203,9 +203,7 @@ public class StreamingServiceTest extends BaseTest {
     final CountDownLatch latch1 = new CountDownLatch(batchSize);
     ServiceMessage justOne = Messages.builder().request(QuoteService.NAME, "justOne").build();
 
-    Flux.from(service.requestOne(justOne)).subscribe(onNext -> {
-      latch1.countDown();
-    });
+    Flux.from(service.requestResponse(justOne)).subscribe(onNext -> latch1.countDown());
 
     latch1.await(2, TimeUnit.SECONDS);
     assertTrue(latch1.getCount() == 0);
@@ -228,11 +226,11 @@ public class StreamingServiceTest extends BaseTest {
     Call service = gateway.call();
 
     final CountDownLatch latch1 = new CountDownLatch(batchSize);
-    AtomicReference<Disposable> sub1 = new AtomicReference<Disposable>(null);
+    AtomicReference<Disposable> sub1 = new AtomicReference<>(null);
     ServiceMessage scheduled = Messages.builder().request(QuoteService.NAME, "scheduled")
         .data(1000).build();
 
-    sub1.set(Flux.from(service.requestMany(scheduled)).subscribe(onNext -> {
+    sub1.set(Flux.from(service.requestStream(scheduled)).subscribe(onNext -> {
       sub1.get().isDisposed();
       latch1.countDown();
 
@@ -264,7 +262,7 @@ public class StreamingServiceTest extends BaseTest {
 
     ServiceMessage scheduled = Messages.builder().request(QuoteService.NAME, "unknonwn").build();
     try {
-      service.requestMany(scheduled);
+      service.requestStream(scheduled).blockFirst(Duration.ofSeconds(3));
     } catch (Exception ex) {
       if (ex.getMessage().contains("No reachable member with such service")) {
         latch1.countDown();
@@ -296,19 +294,14 @@ public class StreamingServiceTest extends BaseTest {
     Call service = gateway.call();
 
     final CountDownLatch latch1 = new CountDownLatch(batchSize);
-    AtomicReference<Disposable> sub1 = new AtomicReference<Disposable>(null);
+    AtomicReference<Disposable> sub1 = new AtomicReference<>(null);
     ServiceMessage justOne = Messages.builder().request(QuoteService.NAME, "justOne").build();
 
-    sub1.set(Flux.from(service.requestMany(justOne))
-        .subscribe(onNext -> {
-          System.out.println(onNext);
-        }));
+    sub1.set(Flux.from(service.requestStream(justOne)).subscribe(System.out::println));
 
     gateway.cluster().listenMembership()
-        .filter(predicate -> predicate.isRemoved())
-        .subscribe(onNext -> {
-          latch1.countDown();
-        });
+        .filter(MembershipEvent::isRemoved)
+        .subscribe(onNext -> latch1.countDown());
 
     node.cluster().shutdown();
 

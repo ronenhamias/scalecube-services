@@ -6,6 +6,7 @@ import io.scalecube.services.exceptions.UnauthorizedException;
 
 import java.util.concurrent.CountDownLatch;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public final class GreetingServiceImpl implements GreetingService {
@@ -93,5 +94,10 @@ public final class GreetingServiceImpl implements GreetingService {
   public Mono<GreetingResponse> exceptionRequest(GreetingRequest request) {
     System.out.println("[exceptionRequest] Hello... i am a service an just recived a message:" + request);
     throw new IllegalArgumentException(request.toString());
+  }
+
+  @Override
+  public Flux<GreetingResponse> greetingStream(Flux<GreetingRequest> requestFlux) {
+    return requestFlux.map(GreetingRequest::getName).map(GreetingResponse::new);
   }
 }

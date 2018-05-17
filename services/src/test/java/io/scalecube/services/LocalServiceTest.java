@@ -1,11 +1,12 @@
 package io.scalecube.services;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -17,12 +18,11 @@ import reactor.core.publisher.Mono;
 
 public class LocalServiceTest extends BaseTest {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(LocalServiceTest.class);
+
   private static final Duration timeout = Duration.ofSeconds(3);
 
   private static AtomicInteger port = new AtomicInteger(7000);
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   @Test
   public void test_local_greeting_request_completes_before_timeout() throws Exception {
@@ -53,7 +53,7 @@ public class LocalServiceTest extends BaseTest {
   }
 
   @Test
-  public void test_local_async_greeting() throws Exception {
+  public void test_local_async_greeting() {
     // Create microservices cluster.
     Microservices microservices = Microservices.builder()
         .discoveryPort(port.incrementAndGet())
@@ -75,7 +75,7 @@ public class LocalServiceTest extends BaseTest {
   }
 
   @Test
-  public void test_local_no_params() throws Exception {
+  public void test_local_no_params() {
     // Create microservices cluster.
     Microservices microservices = Microservices.builder()
         .discoveryPort(port.incrementAndGet())
@@ -99,11 +99,12 @@ public class LocalServiceTest extends BaseTest {
   }
 
   @Test
-  public void test_local_void_greeting() {
+  public void test_local_void_greeting() throws Exception {
     // Create microservices instance.
+    CountDownLatch signal = new CountDownLatch(1);
     Microservices node1 = Microservices.builder()
         .discoveryPort(port.incrementAndGet())
-        .services(new GreetingServiceImpl())
+        .services(new GreetingServiceImpl(signal))
         .build()
         .startAwait();
 
@@ -112,11 +113,10 @@ public class LocalServiceTest extends BaseTest {
     CountDownLatch exectOne = new CountDownLatch(1);
     // call the service.
     service.greetingVoid(new GreetingRequest("joe"))
-        .doOnSuccess((success) -> {
-          exectOne.countDown();
-        }).subscribe();
+        .doOnSuccess((success) -> exectOne.countDown()).subscribe();
 
-
+    signal.await(2, TimeUnit.SECONDS);
+    assertEquals(0, signal.getCount());
     // send and forget so we have no way to know what happen
     // but at least we didn't get exception :)
     assertTrue(exectOne.getCount() == 0);
@@ -127,7 +127,7 @@ public class LocalServiceTest extends BaseTest {
 
 
   @Test
-  public void test_local_async_greeting_return_GreetingResponse() throws Exception {
+  public void test_local_async_greeting_return_GreetingResponse() {
     // Create microservices cluster.
     Microservices microservices = Microservices.builder()
         .discoveryPort(port.incrementAndGet())
@@ -153,31 +153,27 @@ public class LocalServiceTest extends BaseTest {
 
 
   @Test
-  public void test_local_greeting_request_timeout_expires() throws Exception {
-    thrown.expect(RuntimeException.class);
-    thrown.expectMessage("Did not observe any item or terminal signal");
-
+  public void test_local_greeting_request_timeout_expires() {
     // Create microservices instance.
     Microservices node1 = Microservices.builder()
         .discoveryPort(port.incrementAndGet())
         .services(new GreetingServiceImpl())
         .build()
         .startAwait();
-
     GreetingService service = node1.call().api(GreetingService.class);
 
     // call the service.
-
-    Mono.from(service.greetingRequestTimeout(new GreetingRequest("joe", timeout)))
-        .timeout(Duration.ofSeconds(1))
-        .block();
-
+    Throwable exception = assertThrows(RuntimeException.class,
+        () -> Mono.from(service.greetingRequestTimeout(new GreetingRequest("joe", timeout)))
+            .timeout(Duration.ofSeconds(1))
+            .block());
+    assertTrue(exception.getCause().getMessage().contains("Did not observe any item or terminal signal"));
     node1.shutdown().block();
   }
 
 
   @Test
-  public void test_local_async_greeting_return_Message() throws Exception {
+  public void test_local_async_greeting_return_Message() {
     // Create microservices cluster.
     Microservices microservices = Microservices.builder()
         .discoveryPort(port.incrementAndGet())
@@ -191,24 +187,20 @@ public class LocalServiceTest extends BaseTest {
     // call the service.
     Mono<GreetingResponse> future = Mono.from(service.greetingRequest(new GreetingRequest("joe")));
 
-    future.doOnNext(result -> {
-      assertTrue(result.getResult().equals(" hello to: joe"));
-      // print the greeting.
-      System.out.println("9. local_async_greeting_return_Message :" + result);
-    });
-    future.doOnError(ex -> {
-      // print the greeting.
-      System.out.println(ex);
-    });
+    future
+        .doOnNext(result -> {
+          assertTrue(result.getResult().equals(" hello to: joe"));
+          // print the greeting.
+          System.out.println("9. local_async_greeting_return_Message :" + result);
+        })
+        .doOnError(System.out::println)
+        .block(Duration.ofSeconds(1));
 
-    future.block(Duration.ofSeconds(1));
     microservices.shutdown().block();
   }
 
   private GreetingService createProxy(Microservices gateway) {
-    return gateway.call()
-        .api(GreetingService.class); // create proxy for GreetingService API
-
+    return gateway.call().api(GreetingService.class); // create proxy for GreetingService API
   }
 
   private boolean await(CountDownLatch timeLatch, long timeout, TimeUnit timeUnit) throws Exception {
