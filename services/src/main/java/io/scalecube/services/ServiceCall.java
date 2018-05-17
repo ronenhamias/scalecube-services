@@ -156,8 +156,6 @@ public class ServiceCall {
             Class<?> responseType;
             if (returnType != null) {
               responseType = returnType;
-            } else if (request.responseType() != null) {
-              responseType = request.responseType();
             } else {
               responseType = Object.class;
             }
