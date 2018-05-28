@@ -7,9 +7,6 @@ import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
-import org.apache.logging.log4j.core.util.IOUtils;
-
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -18,7 +15,6 @@ import java.io.OutputStreamWriter;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public final class GsonCodec implements DataCodec, HeadersCodec {
 
