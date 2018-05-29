@@ -88,6 +88,7 @@
         <module>services-codec-jackson</module>
         <module>services</module>
         <module>benchmarks</module>
+        <module>scalecube-services-gson</module>
     </modules>
 
   <dependencyManagement>

@@ -224,6 +224,14 @@ public class Reflect {
     return Object.class;
   }
 
+  public static Map<Method, MethodInfo> methodsInfo(Class<?> serviceInterface) {
+    return Collections.unmodifiableMap(Reflect.serviceMethods(serviceInterface).values().stream()
+        .collect(Collectors.toMap(m -> m, m-> 
+          new MethodInfo(parameterizedReturnType(m),
+              communicationMode(m),
+              isRequestTypeServiceMessage(m)))));
+  }
+
   /**
    * Util function that returns the parameterized of the request Type of a given object.
    * 
@@ -378,4 +386,6 @@ public class Reflect {
       return Flux.error(ex);
     }
   }
+
+
 }
