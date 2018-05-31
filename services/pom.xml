@@ -28,7 +28,8 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>scalecube-services-jackson</artifactId>
+      <!--<artifactId>scalecube-services-jackson</artifactId>-->
+      <artifactId>scalecube-services-dsl-json</artifactId>
       <version>${project.version}</version>
     </dependency>
 

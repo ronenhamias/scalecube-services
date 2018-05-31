@@ -86,6 +86,7 @@
         <module>services-transport</module>
         <module>services-codec</module>
         <module>services-codec-jackson</module>
+      <module>services-codec-dsl-json</module>
         <module>services</module>
         <module>benchmarks</module>
     </modules>
