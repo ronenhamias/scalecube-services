@@ -151,14 +151,10 @@ public class Microservices {
     clusterConfig = builder.clusterConfig;
   }
 
-  public Mono<Microservices> start() {
+  private Mono<Microservices> start() {
     clusterConfig.addMetadata(serviceRegistry.listServiceEndpoints().stream()
         .collect(Collectors.toMap(ServiceDiscovery::encodeMetadata, service -> SERVICE_METADATA)));
     return Mono.fromFuture(Cluster.join(clusterConfig.build())).map(this::init);
-  }
-
-  public Microservices startAwait() {
-    return start().block();
   }
 
   public Metrics metrics() {
