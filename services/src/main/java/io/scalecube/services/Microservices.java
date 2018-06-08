@@ -184,7 +184,8 @@ public class Microservices {
      * @return Mono<Microservices> instance.
      */
     public Mono<Microservices> start() {
-      return new Microservices(this).start();
+      Microservices instance = new Microservices(this);
+      return instance.start();
     }
 
     /**
