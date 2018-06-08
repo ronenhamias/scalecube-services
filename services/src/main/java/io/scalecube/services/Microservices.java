@@ -24,6 +24,8 @@ import io.scalecube.transport.Addressing;
 
 import com.codahale.metrics.MetricRegistry;
 
+import reactor.core.publisher.Mono;
+
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,8 +35,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import reactor.core.publisher.Mono;
 
 /**
  * The ScaleCube-Services module enables to provision and consuming microservices in a cluster. ScaleCube-Services
@@ -185,10 +185,19 @@ public class Microservices {
     /**
      * Microservices instance builder.
      *
+     * @return Mono<Microservices> instance.
+     */
+    public Mono<Microservices> start() {
+      return new Microservices(this).start();
+    }
+
+    /**
+     * Microservices instance builder.
+     *
      * @return Microservices instance.
      */
-    public Microservices build() {
-      return new Microservices(this);
+    public Microservices startAwait() {
+      return new Microservices(this).start().block();
     }
 
     public Builder server(ServerTransport server) {
