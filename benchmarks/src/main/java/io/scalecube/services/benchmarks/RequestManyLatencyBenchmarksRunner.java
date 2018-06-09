@@ -1,17 +1,18 @@
 package io.scalecube.services.benchmarks;
 
+import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
 
-import reactor.core.publisher.Flux;
-
+import java.time.Duration;
 import java.util.stream.LongStream;
 
-public class RequestManyBenchmarksRunner {
+import reactor.core.publisher.Flux;
+
+public class RequestManyLatencyBenchmarksRunner {
 
   public static void main(String[] args) {
     ServicesBenchmarksSettings settings = ServicesBenchmarksSettings.from(args)
-        .responseCount(10000)
         .build();
 
     ServicesBenchmarksState state = new ServicesBenchmarksState(settings, new BenchmarkServiceImpl());
@@ -20,14 +21,18 @@ public class RequestManyBenchmarksRunner {
     BenchmarkService benchmarkService = state.service(BenchmarkService.class);
     int responseCount = settings.responseCount();
     Timer timer = state.timer();
-    Meter meter = state.registry().meter(RequestManyCallBenchmarksRunner.class + ".requestMany-responses");
+    Meter meter = state.registry().meter(RequestManyCallBenchmarksRunner.class + ".nanoTime.throhput");
+    Histogram latnecy = state.registry().histogram(RequestManyCallBenchmarksRunner.class + ".nanoTime.latency");
     Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
         .parallel(Runtime.getRuntime().availableProcessors())
         .runOn(state.scheduler())
         .map(i -> {
           Timer.Context timeContext = timer.time();
-          return benchmarkService.requestMany(responseCount)
-              .doOnNext(onNext -> meter.mark())
+          return benchmarkService.nanoTime(responseCount)
+              .doOnNext(onNext -> {
+                latnecy.update(System.nanoTime() - onNext);
+                meter.mark();
+              })
               .doFinally(next -> timeContext.stop());
         }))
         .take(settings.executionTaskTime())
