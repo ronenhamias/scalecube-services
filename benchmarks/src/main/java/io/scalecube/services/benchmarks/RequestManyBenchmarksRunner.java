@@ -11,8 +11,8 @@ public class RequestManyBenchmarksRunner {
 
   public static void main(String[] args) {
     ServicesBenchmarksSettings settings = ServicesBenchmarksSettings.from(args)
-        .responseCount(10000)
         .build();
+    
     ServicesBenchmarksState state = new ServicesBenchmarksState(settings, new BenchmarkServiceImpl());
     state.setup();
 
