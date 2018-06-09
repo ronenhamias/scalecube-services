@@ -20,8 +20,8 @@ public class RequestManyLatencyBenchmarksRunner {
     BenchmarkService benchmarkService = state.service(BenchmarkService.class);
     int responseCount = settings.responseCount();
     Timer timer = state.timer();
-    Meter meter = state.registry().meter(RequestManyCallBenchmarksRunner.class + ".nanoTime.throhput");
-    Histogram latnecy = state.registry().histogram(RequestManyCallBenchmarksRunner.class + ".nanoTime.latency");
+    Meter meter = state.meter("throughput");
+    Histogram latnecy = state.histogram("latency-nano");
     Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
         .parallel(Runtime.getRuntime().availableProcessors())
         .runOn(state.scheduler())

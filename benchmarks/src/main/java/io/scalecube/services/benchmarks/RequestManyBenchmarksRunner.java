@@ -20,7 +20,7 @@ public class RequestManyBenchmarksRunner {
     BenchmarkService benchmarkService = state.service(BenchmarkService.class);
     int responseCount = settings.responseCount();
     Timer timer = state.timer();
-    Meter meter = state.registry().meter(RequestManyCallBenchmarksRunner.class + ".requestMany-responses");
+    Meter meter = state.meter("responses");
     Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
         .parallel(Runtime.getRuntime().availableProcessors())
         .runOn(state.scheduler())
