@@ -25,13 +25,11 @@ public class Example1 {
     public static void main(String[] args) throws InterruptedException {
 
         Microservices gateway = Microservices.builder()
-                .build()
                 .startAwait();
 
         Microservices ms = Microservices.builder()
                 .seeds(gateway.cluster().address())
                 .services(new DefaultMarketDataService())
-                .build()
                 .startAwait();
 
         MarketDataService marketService = ms.call().create().api(MarketDataService.class);

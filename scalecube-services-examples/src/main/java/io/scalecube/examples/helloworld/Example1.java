@@ -18,13 +18,12 @@ public class Example1 {
 
     public static void main(String[] args) {
         // ScaleCube Node node with no members
-        Microservices seed = Microservices.builder().build().startAwait();
+        Microservices seed = Microservices.builder().startAwait();
 
         // Construct a ScaleCube node which joins the cluster hosting the Greeting Service
         Microservices microservices = Microservices.builder()
                 .seeds(seed.cluster().address())
                 .services(new GreetingServiceImpl())
-                .build()
                 .startAwait();
 
         // Create service proxy
