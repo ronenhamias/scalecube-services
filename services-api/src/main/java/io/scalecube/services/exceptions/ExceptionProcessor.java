@@ -9,10 +9,9 @@ import java.util.Optional;
 public class ExceptionProcessor {
 
   private static final int DEFAULT_ERROR_CODE = 500;
-  private static final String ERROR_NAMESPACE = "io.scalecube.service.error";
 
   public static boolean isError(ServiceMessage message) {
-    return message.qualifier().contains(ERROR_NAMESPACE);
+    return message.qualifier().contains(Qualifier.ERROR_NAMESPACE);
   }
 
   public static ServiceMessage toMessage(Throwable throwable) {
@@ -35,16 +34,16 @@ public class ExceptionProcessor {
     String errorMessage = Optional.ofNullable(throwable.getMessage()).orElseGet(throwable::toString);
     ErrorData errorData = new ErrorData(errorCode, errorMessage);
 
-    return ServiceMessage.builder().qualifier(
-        new Qualifier(ERROR_NAMESPACE, Integer.toString(errorType)).asString())
+    return ServiceMessage.builder()
+        .qualifier(Qualifier.asError(errorType))
         .data(errorData)
         .build();
   }
 
-  public static ServiceException toException(ServiceMessage message) {
-    int errorType = Integer.parseInt(Qualifier.getQualifierAction(message.qualifier()));
-    int errorCode = ((ErrorData) message.data()).getErrorCode();
-    String errorMessage = ((ErrorData) message.data()).getErrorMessage();
+  public static ServiceException toException(String qualifier, ErrorData data) {
+    int errorType = Integer.parseInt(Qualifier.getQualifierAction(qualifier));
+    int errorCode = data.getErrorCode();
+    String errorMessage = data.getErrorMessage();
 
     switch (errorType) {
       case BadRequestException.ERROR_TYPE:

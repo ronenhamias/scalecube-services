@@ -12,7 +12,7 @@ import reactor.core.publisher.Flux;
 
 public class OrderBooks {
 
-  private Map<String, OrderBook> books = new HashMap();
+  private Map<String, OrderBook> books = new HashMap<>();
   private Long2ObjectOpenHashMap<Order> orders;
 
   public OrderBooks(List<String> instruments) {

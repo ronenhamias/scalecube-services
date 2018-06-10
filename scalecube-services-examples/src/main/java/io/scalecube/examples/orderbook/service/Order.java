@@ -8,18 +8,14 @@ import io.scalecube.examples.orderbook.service.engine.events.Side;
 public class Order {
 
     private OrderBook book;
-
     private Side side;
     private long price;
-
     private long remainingQuantity;
 
     Order(OrderBook book, Side side, long price, long size) {
         this.book = book;
-
         this.side  = side;
         this.price = price;
-
         this.remainingQuantity = size;
     }
 
@@ -66,5 +62,4 @@ public class Order {
     void reduce(long quantity) {
         remainingQuantity -= quantity;
     }
-
 }

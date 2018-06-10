@@ -1,9 +1,7 @@
 package io.scalecube.services.discovery;
 
 import io.scalecube.cluster.Cluster;
-import io.scalecube.cluster.ClusterConfig;
 import io.scalecube.cluster.Member;
-import io.scalecube.concurrency.ThreadFactory;
 import io.scalecube.services.ServiceEndpoint;
 import io.scalecube.services.registry.api.ServiceRegistry;
 
@@ -16,10 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class ServiceDiscovery {
 
@@ -28,36 +22,22 @@ public class ServiceDiscovery {
   private static final ObjectMapper objectMapper = newObjectMapper();
   public static final String SERVICE_METADATA = "service";
 
-  private final ServiceRegistry serviceRegistry; // service_registry -> cluster (on start on shuytdown)
-  private Cluster cluster; // cluster -> service_registry (on listen cluster events)
+  private final ServiceRegistry serviceRegistry;
 
   private enum DiscoveryType {
-    ADDED, REMOVED, DISCOVERED
+    ADDED, REMOVED, DISCOVERED;
   }
 
   public ServiceDiscovery(ServiceRegistry serviceRegistry) {
     this.serviceRegistry = serviceRegistry;
   }
 
-  public void start(ClusterConfig.Builder config) {
-    cluster = Cluster.joinAwait(addMetadata(config, serviceRegistry.listServiceEndpoints()).build());
-    loadClusterServices();
-    listenCluster();
+  public void init(Cluster cluster) {
+    loadClusterServices(cluster);
+    listenCluster(cluster);
   }
 
-  public CompletableFuture<Void> shutdown() {
-    return cluster.shutdown();
-  }
-
-  private ClusterConfig.Builder addMetadata(ClusterConfig.Builder cfg, Collection<ServiceEndpoint> serviceEndpoints) {
-    if (serviceEndpoints != null) {
-      cfg.addMetadata(serviceEndpoints.stream()
-          .collect(Collectors.toMap(ServiceDiscovery::encodeMetadata, service -> SERVICE_METADATA)));
-    }
-    return cfg;
-  }
-
-  private void listenCluster() {
+  private void listenCluster(Cluster cluster) {
     cluster.listenMembership().subscribe(event -> {
       if (event.isAdded()) {
         loadMemberServices(DiscoveryType.ADDED, event.member());
@@ -65,11 +45,9 @@ public class ServiceDiscovery {
         loadMemberServices(DiscoveryType.REMOVED, event.member());
       }
     });
-    ThreadFactory.singleScheduledExecutorService("service-registry-discovery")
-        .scheduleAtFixedRate(this::loadClusterServices, 10, 10, TimeUnit.SECONDS);
   }
 
-  private void loadClusterServices() {
+  private void loadClusterServices(Cluster cluster) {
     cluster.otherMembers().forEach(member -> {
       loadMemberServices(DiscoveryType.DISCOVERED, member);
     });
@@ -85,16 +63,18 @@ public class ServiceDiscovery {
           }
 
           LOGGER.debug("Member: {} is {} : {}", member, type, serviceEndpoint);
-          if (type.equals(DiscoveryType.ADDED) || type.equals(DiscoveryType.DISCOVERED)) {
-            if (serviceRegistry.registerService(serviceEndpoint)) {
-              LOGGER.info("Service Reference was ADDED since new Member has joined the cluster {} : {}",
-                  member, serviceEndpoint);
-            }
-          } else if (type.equals(DiscoveryType.REMOVED)) {
-            if (serviceRegistry.unregisterService(serviceEndpoint.id()) != null) {
-              LOGGER.info("Service Reference was REMOVED since Member have left the cluster {} : {}",
-                  member, serviceEndpoint);
-            }
+          if ((type.equals(DiscoveryType.ADDED) || type.equals(DiscoveryType.DISCOVERED))
+              && (serviceRegistry.registerService(serviceEndpoint))) {
+
+            LOGGER.info("Service Reference was ADDED since new Member has joined the cluster {} : {}",
+                member, serviceEndpoint);
+
+          } else if (type.equals(DiscoveryType.REMOVED)
+              && (serviceRegistry.unregisterService(serviceEndpoint.id()) != null)) {
+
+            LOGGER.info("Service Reference was REMOVED since Member have left the cluster {} : {}",
+                member, serviceEndpoint);
+
           }
         });
   }
@@ -110,7 +90,7 @@ public class ServiceDiscovery {
     return objectMapper;
   }
 
-  private static ServiceEndpoint decodeMetadata(String metadata) {
+  public static ServiceEndpoint decodeMetadata(String metadata) {
     try {
       return objectMapper.readValue(metadata, ServiceEndpoint.class);
     } catch (IOException e) {
@@ -119,16 +99,12 @@ public class ServiceDiscovery {
     }
   }
 
-  private static String encodeMetadata(ServiceEndpoint serviceEndpoint) {
+  public static String encodeMetadata(ServiceEndpoint serviceEndpoint) {
     try {
       return objectMapper.writeValueAsString(serviceEndpoint);
     } catch (IOException e) {
       LOGGER.error("Can write metadata: " + e, e);
       throw Throwables.propagate(e);
     }
-  }
-
-  public Cluster cluster() {
-    return this.cluster;
   }
 }

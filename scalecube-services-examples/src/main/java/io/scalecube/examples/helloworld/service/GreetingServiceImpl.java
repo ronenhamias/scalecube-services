@@ -5,11 +5,9 @@ import io.scalecube.examples.helloworld.service.api.GreetingsService;
 
 import reactor.core.publisher.Mono;
 
-public class GreetingServiceImpl implements GreetingsService{
-
+public class GreetingServiceImpl implements GreetingsService {
   @Override
   public Mono<Greeting> sayHello(String name) {    
     return Mono.just(new Greeting("Nice to meet you " + name +" and welcome to ScaleCube"));
   }
-
 }

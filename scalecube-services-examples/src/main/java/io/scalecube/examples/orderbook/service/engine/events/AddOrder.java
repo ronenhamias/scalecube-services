@@ -7,7 +7,7 @@ public class AddOrder {
   long price;
   long remainingQuantity;
 
-  public AddOrder() {};
+  public AddOrder() {}
   public AddOrder(long orderId, Side side, long price, long remainingQuantity) {
     this.orderId = orderId;
     this.side = side;
