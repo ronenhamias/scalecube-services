@@ -21,8 +21,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.ipc.netty.tcp.TcpClient;
 
 public class RSocketClientTransport implements ClientTransport {
@@ -68,6 +68,12 @@ public class RSocketClientTransport implements ClientTransport {
         .subscribe(o -> System.out.println("2, o = " + o), t -> System.err.println("2, " + t),
             () -> System.out.println("2, comleted"));
 
+    Mono.from(processor)
+        .doOnEach(signal -> System.out.println("4, o = " + signal))
+        .flatMapMany(o -> Flux.interval(Duration.ofSeconds(1)))
+        .subscribe(o -> System.out.println("4, o = " + o), t -> System.err.println("4, " + t),
+            () -> System.out.println("4, comleted"));
+
     Thread.sleep(5000);
 
     Flux.from(processor)
@@ -75,6 +81,12 @@ public class RSocketClientTransport implements ClientTransport {
         .flatMap(o -> Flux.interval(Duration.ofSeconds(1)))
         .subscribe(o -> System.out.println("3, o = " + o), t -> System.err.println("3, " + t),
             () -> System.out.println("3, comleted"));
+
+    Mono.from(processor)
+        .doOnEach(signal -> System.out.println("5, o = " + signal))
+        .flatMapMany(o -> Flux.interval(Duration.ofSeconds(1)))
+        .subscribe(o -> System.out.println("5, o = " + o), t -> System.err.println("5, " + t),
+            () -> System.out.println("5, comleted"));
 
     Thread.currentThread().join();
   }
