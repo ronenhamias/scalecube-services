@@ -15,10 +15,12 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import reactor.core.publisher.MonoProcessor;
+import reactor.core.publisher.EmitterProcessor;
+import reactor.core.publisher.Flux;
 import reactor.ipc.netty.tcp.TcpClient;
 
 public class RSocketClientTransport implements ClientTransport {
@@ -33,6 +35,28 @@ public class RSocketClientTransport implements ClientTransport {
     this.codec = codec;
   }
 
+  public static void main(String[] args) throws InterruptedException {
+    EmitterProcessor<Object> processor = EmitterProcessor.create();
+    processor.onNext(1); // rSocket
+
+    // Flux.from(processor).subscribe(System.out::println);
+    // Flux.from(processor).subscribe(System.out::println);
+
+    Flux.from(processor)
+        .doOnEach(System.out::println)
+        .flatMap(o -> Flux.interval(Duration.ofSeconds(1)))
+        .subscribe(System.out::println, System.err::println);
+
+    // processor.onError(new RuntimeException("connection down")); // connection down
+
+    Flux.from(processor)
+        .doOnEach(System.out::println)
+        .flatMap(o -> Flux.interval(Duration.ofSeconds(1)))
+        .subscribe(System.out::println, System.err::println);
+
+    Thread.currentThread().join();
+  }
+
   @Override
   public ClientChannel create(Address address) {
     final Map<Address, Publisher<RSocket>> monoMap = rSockets; // keep reference for threadsafety
@@ -41,7 +65,7 @@ public class RSocketClientTransport implements ClientTransport {
   }
 
   private static Publisher<RSocket> connect(Address address, Map<Address, Publisher<RSocket>> monoMap) {
-    MonoProcessor<RSocket> rSocketProcessor = MonoProcessor.create();
+    EmitterProcessor<RSocket> rSocketProcessor = EmitterProcessor.create(1);
 
     RSocketFactory.connect()
         .transport(TcpClientTransport.create(
@@ -55,7 +79,8 @@ public class RSocketClientTransport implements ClientTransport {
                     @Override
                     public void channelInactive(ChannelHandlerContext ctx) {
                       monoMap.remove(address);
-                      LOGGER.info("Connection became inactive on {} and removed the pool", address);
+                      LOGGER.info("Connection became inactive on {} and removed from the pool", address);
+                      rSocketProcessor.onError(new RuntimeException());
                       ctx.fireChannelInactive();
                     }
                   });
@@ -67,13 +92,19 @@ public class RSocketClientTransport implements ClientTransport {
               rSocket.onClose().subscribe(aVoid -> {
                 monoMap.remove(address);
                 LOGGER.info("Connection closed on {} and removed from the pool", address);
+                rSocketProcessor.onError(new RuntimeException());
               });
               rSocketProcessor.onNext(rSocket);
             },
             throwable -> {
-              LOGGER.warn("Connect failed on {}, cause: {}", address, throwable);
               monoMap.remove(address);
+              LOGGER.warn("Connect failed on {}, cause: {}", address, throwable);
               rSocketProcessor.onError(throwable);
+            },
+            () -> {
+              monoMap.remove(address);
+              LOGGER.info("Connection became inactive on {} due onComplete and removed from the pool", address);
+              rSocketProcessor.onError(new RuntimeException());
             });
 
     return rSocketProcessor;
