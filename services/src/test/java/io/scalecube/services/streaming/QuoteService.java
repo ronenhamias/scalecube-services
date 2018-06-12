@@ -22,5 +22,7 @@ public interface QuoteService {
 
   @ServiceMethod
   Flux<String> scheduled(int interval);
-  
+
+  @ServiceMethod
+  Mono<String> justNever();
 }

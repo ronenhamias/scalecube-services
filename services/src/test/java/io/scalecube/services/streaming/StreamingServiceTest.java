@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import io.scalecube.cluster.membership.MembershipEvent;
 import io.scalecube.services.BaseTest;
 import io.scalecube.services.Microservices;
 import io.scalecube.services.ServiceCall.Call;
@@ -14,15 +13,14 @@ import com.codahale.metrics.MetricRegistry;
 
 import org.junit.jupiter.api.Test;
 
-import reactor.core.Disposable;
-import reactor.core.publisher.Flux;
-
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
+
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 
 public class StreamingServiceTest extends BaseTest {
 
@@ -246,41 +244,6 @@ public class StreamingServiceTest extends BaseTest {
     }
 
     node.shutdown();
-    gateway.shutdown();
-
-  }
-
-  @Test
-  public void test_remote_node_died() throws InterruptedException {
-    int batchSize = 1;
-    Microservices gateway = Microservices.builder()
-        .discoveryPort(port.incrementAndGet())
-        .startAwait();
-
-    Microservices node = Microservices.builder()
-        .discoveryPort(port.incrementAndGet())
-        .seeds(gateway.cluster().address())
-        .services(new SimpleQuoteService())
-        .startAwait();
-
-    Call service = gateway.call();
-
-    final CountDownLatch latch1 = new CountDownLatch(batchSize);
-    AtomicReference<Disposable> sub1 = new AtomicReference<>(null);
-    ServiceMessage justOne = ServiceMessage.builder().qualifier(QuoteService.NAME, "justOne").build();
-
-    sub1.set(Flux.from(service.create().requestMany(justOne)).subscribe(System.out::println));
-
-    gateway.cluster().listenMembership()
-        .filter(MembershipEvent::isRemoved)
-        .subscribe(onNext -> latch1.countDown());
-
-    node.cluster().shutdown();
-
-    latch1.await(20, TimeUnit.SECONDS);
-    Thread.sleep(100);
-    assertTrue(latch1.getCount() == 0);
-    assertTrue(sub1.get().isDisposed());
     gateway.shutdown();
   }
 }
