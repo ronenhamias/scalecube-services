@@ -17,7 +17,9 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
@@ -36,23 +38,43 @@ public class RSocketClientTransport implements ClientTransport {
   }
 
   public static void main(String[] args) throws InterruptedException {
-    EmitterProcessor<Object> processor = EmitterProcessor.create();
-    processor.onNext(1); // rSocket
+    Publisher<Object> processor = Flux.create(sink -> {
+      CompletableFuture<Void> promise = CompletableFuture.runAsync(() -> {
+        try {
+          Thread.sleep(1000);
 
-    // Flux.from(processor).subscribe(System.out::println);
-    // Flux.from(processor).subscribe(System.out::println);
+          sink.next(1); // rSocket succesful connection
+
+          Thread.sleep(2000);
+
+          sink.error(new RuntimeException("connection down"));
+
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+      }, Executors.newFixedThreadPool(1));
+    })
+        .cache(0);
 
     Flux.from(processor)
-        .doOnEach(System.out::println)
+        .doOnEach(signal -> System.out.println("1, o = " + signal))
         .flatMap(o -> Flux.interval(Duration.ofSeconds(1)))
-        .subscribe(System.out::println, System.err::println);
-
-    // processor.onError(new RuntimeException("connection down")); // connection down
+        .subscribe(o -> System.out.println("1, o = " + o), t -> System.err.println("1, " + t),
+            () -> System.out.println("1, comleted"));
 
     Flux.from(processor)
-        .doOnEach(System.out::println)
+        .doOnEach(signal -> System.out.println("2, o = " + signal))
         .flatMap(o -> Flux.interval(Duration.ofSeconds(1)))
-        .subscribe(System.out::println, System.err::println);
+        .subscribe(o -> System.out.println("2, o = " + o), t -> System.err.println("2, " + t),
+            () -> System.out.println("2, comleted"));
+
+    Thread.sleep(5000);
+
+    Flux.from(processor)
+        .doOnEach(signal -> System.out.println("3, o = " + signal))
+        .flatMap(o -> Flux.interval(Duration.ofSeconds(1)))
+        .subscribe(o -> System.out.println("3, o = " + o), t -> System.err.println("3, " + t),
+            () -> System.out.println("3, comleted"));
 
     Thread.currentThread().join();
   }
