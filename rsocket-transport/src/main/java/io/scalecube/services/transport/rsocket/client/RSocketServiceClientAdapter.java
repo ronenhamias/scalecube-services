@@ -11,7 +11,9 @@ import io.rsocket.util.ByteBufPayload;
 import org.reactivestreams.Publisher;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoSink;
 
 public class RSocketServiceClientAdapter implements ClientChannel {
 
@@ -26,14 +28,40 @@ public class RSocketServiceClientAdapter implements ClientChannel {
   @Override
   public Mono<ServiceMessage> requestResponse(ServiceMessage message) {
     return Mono.from(rSocket)
-        .flatMap(rSocket -> rSocket.requestResponse(toPayload(message)))
+        .flatMap(rSocket -> Mono.create((MonoSink<Payload> emitter) -> {
+          rSocket.onClose().subscribe(
+
+              aVoid -> {
+              },
+              throwable -> {
+              },
+              () -> {
+                emitter.error(new RuntimeException("### onComplete"));
+              });
+
+          rSocket.requestResponse(toPayload(message))
+              .subscribe(emitter::success, emitter::error, emitter::success);
+        }))
         .map(this::toMessage);
   }
 
   @Override
   public Flux<ServiceMessage> requestStream(ServiceMessage message) {
     return Flux.from(rSocket)
-        .flatMap(rSocket -> rSocket.requestStream(toPayload(message)))
+        .flatMap(rSocket -> Flux.create((FluxSink<Payload> emitter) -> {
+          rSocket.onClose().subscribe(
+
+              aVoid -> {
+              },
+              throwable -> {
+              },
+              () -> {
+                emitter.error(new RuntimeException("### onComplete"));
+              });
+
+          rSocket.requestStream(toPayload(message))
+              .subscribe(emitter::next, emitter::error, emitter::complete);
+        }))
         .map(this::toMessage);
   }
 
