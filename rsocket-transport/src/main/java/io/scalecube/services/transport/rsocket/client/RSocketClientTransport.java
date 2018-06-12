@@ -9,7 +9,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.rsocket.RSocket;
 import io.rsocket.RSocketFactory;
-import io.rsocket.exceptions.ConnectionErrorException;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 
 import org.reactivestreams.Publisher;
@@ -19,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 import reactor.ipc.netty.tcp.TcpClient;
 
@@ -42,7 +40,7 @@ public class RSocketClientTransport implements ClientTransport {
     return new RSocketServiceClientAdapter(rSocket, codec);
   }
 
-  private static Mono<RSocket> connect(Address address, Map<Address, Publisher<RSocket>> monoMap) {
+  private static Publisher<RSocket> connect(Address address, Map<Address, Publisher<RSocket>> monoMap) {
     MonoProcessor<RSocket> rSocketProcessor = MonoProcessor.create();
 
     RSocketFactory.connect()
@@ -57,8 +55,7 @@ public class RSocketClientTransport implements ClientTransport {
                     @Override
                     public void channelInactive(ChannelHandlerContext ctx) {
                       monoMap.remove(address);
-                      LOGGER.debug("Connection became inactive on {} and removed from monoMap", address);
-                      rSocketProcessor.onError(new ConnectionErrorException("channelInactive"));
+                      LOGGER.info("Connection became inactive on {} and removed the pool", address);
                       ctx.fireChannelInactive();
                     }
                   });
@@ -66,11 +63,10 @@ public class RSocketClientTransport implements ClientTransport {
         .start()
         .subscribe(
             rSocket -> {
-              LOGGER.debug("Connected successfully on {}", address);
+              LOGGER.info("Connected successfully on {}", address);
               rSocket.onClose().subscribe(aVoid -> {
                 monoMap.remove(address);
-                LOGGER.debug("Connection closed on {} and removed from the pool", address);
-                rSocketProcessor.onError(new ConnectionErrorException("onClose"));
+                LOGGER.info("Connection closed on {} and removed from the pool", address);
               });
               rSocketProcessor.onNext(rSocket);
             },
@@ -82,5 +78,4 @@ public class RSocketClientTransport implements ClientTransport {
 
     return rSocketProcessor;
   }
-
 }

@@ -25,9 +25,8 @@ public class RSocketServiceClientAdapter implements ClientChannel {
 
   @Override
   public Mono<ServiceMessage> requestResponse(ServiceMessage message) {
-    return Flux.from(rSocket)
+    return Mono.from(rSocket)
         .flatMap(rSocket -> rSocket.requestResponse(toPayload(message)))
-        .as(Mono::from)
         .map(this::toMessage);
   }
 
