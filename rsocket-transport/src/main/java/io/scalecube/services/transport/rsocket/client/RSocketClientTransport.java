@@ -5,6 +5,8 @@ import io.scalecube.services.transport.client.api.ClientChannel;
 import io.scalecube.services.transport.client.api.ClientTransport;
 import io.scalecube.transport.Address;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.rsocket.RSocket;
 import io.rsocket.RSocketFactory;
 import io.rsocket.transport.netty.client.TcpClientTransport;
@@ -41,37 +43,37 @@ public class RSocketClientTransport implements ClientTransport {
   private static Publisher<RSocket> connect(Address address, Map<Address, Publisher<RSocket>> monoMap) {
     MonoProcessor<RSocket> rSocketProcessor = MonoProcessor.create();
 
-    TcpClient tcpClient =
-        TcpClient.create(options -> options.disablePool().host(address.host()).port(address.port()));
-
     RSocketFactory.connect()
-        .transport(TcpClientTransport.create(tcpClient))
+        .transport(TcpClientTransport.create(
+            TcpClient.create(options -> options
+                .disablePool()
+                .host(address.host())
+                .port(address.port())
+                .afterNettyContextInit(nettyContext -> {
+                  // add handler to react on remote node closes connection
+                  nettyContext.addHandler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelInactive(ChannelHandlerContext ctx) {
+                      monoMap.remove(address);
+                      LOGGER.info("Connection became inactive on {} and removed the pool", address);
+                      ctx.fireChannelInactive();
+                    }
+                  });
+                }))))
         .start()
         .subscribe(
             rSocket -> {
               LOGGER.info("Connected successfully on {}", address);
-              rSocket.onClose().subscribe(
-                  aVoid -> {
-                  },
-                  throwable -> {
-                  },
-                  () -> {
-                    monoMap.remove(address);
-                    LOGGER.info("Connection closed on {} and removed from the pool", address);
-                  });
+              rSocket.onClose().subscribe(aVoid -> {
+                monoMap.remove(address);
+                LOGGER.info("Connection closed on {} and removed from the pool", address);
+              });
               rSocketProcessor.onNext(rSocket);
             },
             throwable -> {
-              monoMap.remove(address);
               LOGGER.warn("Connect failed on {}, cause: {}", address, throwable);
+              monoMap.remove(address);
               rSocketProcessor.onError(throwable);
-            },
-            () -> {
-              MonoProcessor<RSocket> processor = (MonoProcessor<RSocket>) monoMap.remove(address);
-              LOGGER.info("Connection became inactive on {} due onComplete and removed from the pool", address);
-              if (processor.isSuccess()) {
-                processor.block().dispose();
-              }
             });
 
     return rSocketProcessor;
