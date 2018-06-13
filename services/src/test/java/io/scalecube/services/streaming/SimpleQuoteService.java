@@ -40,6 +40,6 @@ public class SimpleQuoteService implements QuoteService {
 
   @Override
   public Flux<String> justManyNever() {
-    return Flux.interval(Duration.ofSeconds(1)).map(s -> "quote : " + i.incrementAndGet());
+    return Flux.never();
   }
 }
