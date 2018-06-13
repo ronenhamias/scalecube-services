@@ -28,6 +28,10 @@ public class RSocketServiceClientAdapter implements ClientChannel {
     return Mono.from(rSocket)
         .flatMap(rSocket -> rSocket.requestResponse(toPayload(message)))
         .map(this::toMessage);
+    // return Flux.from(rSocket)
+    // .flatMap(rSocket -> rSocket.requestResponse(toPayload(message)))
+    // .map(this::toMessage)
+    // .single();
   }
 
   @Override

@@ -77,5 +77,41 @@ public class RSocketClientTransport implements ClientTransport {
             });
 
     return rSocketProcessor;
+
+    // return Flux.create(sink -> RSocketFactory.connect()
+    // .transport(TcpClientTransport.create(
+    // TcpClient.create(options -> options
+    // .disablePool()
+    // .host(address.host())
+    // .port(address.port())
+    // .afterNettyContextInit(nettyContext -> {
+    // // add handler to react on remote node closes connection
+    // nettyContext.addHandler(new ChannelInboundHandlerAdapter() {
+    // @Override
+    // public void channelInactive(ChannelHandlerContext ctx) {
+    // monoMap.remove(address);
+    // LOGGER.info("Connection became inactive on {} and removed the pool", address);
+    // ctx.fireChannelInactive();
+    // }
+    // });
+    // }))))
+    // .start()
+    // .subscribe(
+    // rSocket -> {
+    // LOGGER.info("Connected successfully on {}", address);
+    // rSocket.onClose()
+    // .doOnTerminate(() -> {
+    // monoMap.remove(address);
+    // LOGGER.info("Connection closed on {} and removed from the pool", address);
+    // sink.error(new RuntimeException("Connection closed on " + address + " and removed from the pool"));
+    // })
+    // .subscribe();
+    // sink.next(rSocket);
+    // },
+    // throwable -> {
+    // LOGGER.warn("Connect failed on {}, cause: {}", address, throwable);
+    // monoMap.remove(address);
+    // sink.error(throwable);
+    // }));
   }
 }
