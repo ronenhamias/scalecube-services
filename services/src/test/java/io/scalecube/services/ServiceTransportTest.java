@@ -53,7 +53,7 @@ public class ServiceTransportTest {
 
     // service node goes down
     TimeUnit.SECONDS.sleep(3);
-    node.shutdown().block(Duration.ofSeconds(3));
+    node.shutdown().block(Duration.ofSeconds(6));
 
     latch1.await(20, TimeUnit.SECONDS);
     TimeUnit.MILLISECONDS.sleep(100);
@@ -90,7 +90,7 @@ public class ServiceTransportTest {
 
     // service node goes down
     TimeUnit.SECONDS.sleep(3);
-    node.shutdown().block(Duration.ofSeconds(3));
+    node.shutdown().block(Duration.ofSeconds(6));
 
     latch1.await(20, TimeUnit.SECONDS);
     TimeUnit.MILLISECONDS.sleep(100);

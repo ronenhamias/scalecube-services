@@ -247,4 +247,31 @@ public class StreamingServiceTest extends BaseTest {
     node.shutdown();
     gateway.shutdown();
   }
+
+  @Test
+  public void test_snapshot_completes() {
+    int batchSize = 1000;
+    Microservices gateway = Microservices.builder()
+        .discoveryPort(port.incrementAndGet())
+        .startAwait();
+
+    Microservices node = Microservices.builder()
+        .discoveryPort(port.incrementAndGet())
+        .seeds(gateway.cluster().address())
+        .services(new SimpleQuoteService())
+        .startAwait();
+
+    ServiceCall serviceCall = gateway.call().create();
+
+    ServiceMessage message =
+        ServiceMessage.builder().qualifier(QuoteService.NAME, "snapshot").data(batchSize).build();
+
+    List<ServiceMessage> serviceMessages =
+        serviceCall.requestMany(message).timeout(Duration.ofSeconds(5)).collectList().block();
+
+    assertEquals(batchSize, serviceMessages.size());
+
+    gateway.shutdown();
+    node.shutdown();
+  }
 }
