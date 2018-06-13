@@ -21,9 +21,4 @@ public class RandomServiceRouter implements Router {
     }
   }
 
-  @Override
-  public List<ServiceReference> routes(ServiceRegistry serviceRegistry, ServiceMessage request) {
-    return serviceRegistry.lookupService(request.qualifier());
-  }
-
 }

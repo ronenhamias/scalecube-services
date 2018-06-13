@@ -19,12 +19,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import reactor.core.publisher.Mono;
-
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
+
+import reactor.core.publisher.Mono;
 
 public class RoutersTest extends BaseTest {
   public static final int TIMEOUT = 3;
@@ -100,7 +99,7 @@ public class RoutersTest extends BaseTest {
         .startAwait();
 
     Call service = gateway.call().router((reg, msg) -> reg.listServiceReferences().stream().filter(ref -> "2".equals(
-        ref.tags().get("SENDER"))).collect(Collectors.toList()));
+        ref.tags().get("SENDER"))).findFirst());
 
     // call the service.
     for (int i = 0; i < 1e3; i++) {
@@ -129,7 +128,7 @@ public class RoutersTest extends BaseTest {
 
     ServiceCall service = gateway.call().router(
         (reg, msg) -> reg.listServiceReferences().stream().filter(ref -> ((GreetingRequest) msg.data()).getName()
-            .equals(ref.tags().get("ONLYFOR"))).collect(Collectors.toList()))
+            .equals(ref.tags().get("ONLYFOR"))).findFirst())
         .create();
 
     // call the service.

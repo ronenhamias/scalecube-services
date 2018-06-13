@@ -37,9 +37,4 @@ public class RoundRobinServiceRouter implements Router {
     }
   }
 
-  @Override
-  public List<ServiceReference> routes(ServiceRegistry serviceRegistry, ServiceMessage request) {
-    return serviceRegistry.lookupService(request.qualifier());
-  }
-
 }

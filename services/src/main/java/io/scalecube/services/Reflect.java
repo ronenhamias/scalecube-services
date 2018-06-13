@@ -8,7 +8,6 @@ import static java.util.Objects.requireNonNull;
 
 import io.scalecube.services.annotations.AfterConstruct;
 import io.scalecube.services.annotations.Inject;
-import io.scalecube.services.annotations.Null;
 import io.scalecube.services.annotations.RequestType;
 import io.scalecube.services.annotations.Service;
 import io.scalecube.services.annotations.ServiceMethod;
@@ -24,9 +23,6 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -38,6 +34,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Service Injector scan and injects beans to a given Microservices instance.
@@ -120,13 +119,16 @@ public class Reflect {
       } else if (field.isAnnotationPresent(Inject.class) && isService(field.getType())) {
         Inject injection = field.getAnnotation(Inject.class);
         Class<? extends Router> routerClass = injection.router();
-        if (routerClass.isAnnotationPresent(Null.class)) {
+
+        if (routerClass == Router.class) {
           routerClass = RoundRobinServiceRouter.class;
         }
-        Router router = Optional.of(routerClass).map(Routers::getRouter).orElseGet(() -> {
-          LOGGER.warn("Unable to inject router {}, using RoundRobin", injection.router());
+
+        Router router = Optional.ofNullable(Routers.getRouter(routerClass)).orElseGet(() -> {
+          LOGGER.warn("Unable to find instance of {} router, used RoundRobinServiceRouter instead", injection.router());
           return Routers.getRouter(RoundRobinServiceRouter.class);
         });
+
         setField(field, service, this.microservices.call().router(router).create().api(field.getType()));
       }
     }

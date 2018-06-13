@@ -11,15 +11,23 @@ import java.util.Optional;
 public interface Router {
 
   /**
-   * returns service instance if a given request message is applicable.
+   * Returns suitable service references for a given request message.
+   *
+   * @param serviceRegistry service registry
+   * @param request service message
+   * @return service instance
    */
-  default Optional<ServiceReference> route(ServiceRegistry serviceRegistry, ServiceMessage request) {
-    return routes(serviceRegistry, request).stream().findFirst();
-  }
+  Optional<ServiceReference> route(ServiceRegistry serviceRegistry, ServiceMessage request);
 
   /**
-   * returns all applicable routes.
+   * Returns all suitable service references for particular service message.
+   *
+   * @param serviceRegistry service registry
+   * @param request service message
+   * @return list of suitable routes
    */
-  List<ServiceReference> routes(ServiceRegistry serviceRegistry, ServiceMessage request);
+  default List<ServiceReference> routes(ServiceRegistry serviceRegistry, ServiceMessage request) {
+    return serviceRegistry.lookupService(request.qualifier());
+  }
 
 }
