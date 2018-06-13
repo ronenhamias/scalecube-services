@@ -1,6 +1,7 @@
 package io.scalecube.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -16,7 +17,6 @@ import io.scalecube.services.routing.Routers;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 
@@ -307,9 +307,9 @@ public class RemoteServiceTest extends BaseTest {
     provider.shutdown().block();
   }
 
-  @Disabled(value = "https://travis-ci.org/scalecube/scalecube-services/builds/391721913")
   @Test
   public void test_remote_round_robin_selection_logic() {
+    Microservices gateway = gateway();
 
     // Create microservices instance cluster.
     Microservices provider1 = Microservices.builder()
@@ -325,11 +325,16 @@ public class RemoteServiceTest extends BaseTest {
 
     GreetingService service = createProxy(gateway);
 
-    GreetingResponse result1 = Mono.from(service.greetingRequest(new GreetingRequest("joe"))).block();
-    GreetingResponse result2 = Mono.from(service.greetingRequest(new GreetingRequest("joe"))).block();
-    assertTrue(!result1.sender().equals(result2.sender()));
+    for (int i = 0; i < 100; i++) {
+      GreetingResponse result1 = Mono.from(service.greetingRequest(new GreetingRequest("joe"))).block();
+      GreetingResponse result2 = Mono.from(service.greetingRequest(new GreetingRequest("joe"))).block();
+
+      assertNotEquals(result1.sender(), result2.sender());
+    }
+
     provider2.shutdown().block();
     provider1.shutdown().block();
+    gateway.shutdown().block();
   }
 
   @Test
