@@ -44,6 +44,10 @@ public class RSocketServiceClientAdapter implements ClientChannel {
         .map(this::toMessage);
   }
 
+  public Publisher<RSocket> getrSocket() {
+    return rSocket;
+  }
+  
   private Payload toPayload(ServiceMessage request) {
     return messageCodec.encodeAndTransform(request, ByteBufPayload::create);
   }
