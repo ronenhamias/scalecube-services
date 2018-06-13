@@ -25,4 +25,7 @@ public interface QuoteService {
 
   @ServiceMethod
   Mono<String> justNever();
+
+  @ServiceMethod
+  Flux<String> justManyNever();
 }

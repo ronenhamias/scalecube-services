@@ -5,10 +5,9 @@ import io.scalecube.services.transport.client.api.ClientChannel;
 import io.scalecube.services.transport.client.api.ClientTransport;
 import io.scalecube.transport.Address;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.rsocket.RSocket;
 import io.rsocket.RSocketFactory;
+import io.rsocket.exceptions.ConnectionErrorException;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 
 import org.reactivestreams.Publisher;
@@ -18,7 +17,9 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import reactor.core.publisher.MonoProcessor;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
+import reactor.core.publisher.Mono;
 import reactor.ipc.netty.tcp.TcpClient;
 
 public class RSocketClientTransport implements ClientTransport {
@@ -41,77 +42,38 @@ public class RSocketClientTransport implements ClientTransport {
   }
 
   private static Publisher<RSocket> connect(Address address, Map<Address, Publisher<RSocket>> monoMap) {
-    MonoProcessor<RSocket> rSocketProcessor = MonoProcessor.create();
+    return Flux.create((FluxSink<RSocket> sink) -> {
+      TcpClient tcpClient =
+          TcpClient.create(options -> options.disablePool()
+              .host(address.host())
+              .port(address.port()));
 
-    RSocketFactory.connect()
-        .transport(TcpClientTransport.create(
-            TcpClient.create(options -> options
-                .disablePool()
-                .host(address.host())
-                .port(address.port())
-                .afterNettyContextInit(nettyContext -> {
-                  // add handler to react on remote node closes connection
-                  nettyContext.addHandler(new ChannelInboundHandlerAdapter() {
-                    @Override
-                    public void channelInactive(ChannelHandlerContext ctx) {
-                      monoMap.remove(address);
-                      LOGGER.info("Connection became inactive on {} and removed the pool", address);
-                      ctx.fireChannelInactive();
-                    }
-                  });
-                }))))
-        .start()
-        .subscribe(
-            rSocket -> {
-              LOGGER.info("Connected successfully on {}", address);
-              rSocket.onClose().subscribe(aVoid -> {
-                monoMap.remove(address);
-                LOGGER.info("Connection closed on {} and removed from the pool", address);
-              });
-              rSocketProcessor.onNext(rSocket);
-            },
-            throwable -> {
-              LOGGER.warn("Connect failed on {}, cause: {}", address, throwable);
-              monoMap.remove(address);
-              rSocketProcessor.onError(throwable);
-            });
+      TcpClientTransport tcpClientTransport =
+          TcpClientTransport.create(tcpClient);
 
-    return rSocketProcessor;
+      Mono<RSocket> rSocketMono =
+          RSocketFactory.connect().transport(tcpClientTransport).start();
 
-    // return Flux.create(sink -> RSocketFactory.connect()
-    // .transport(TcpClientTransport.create(
-    // TcpClient.create(options -> options
-    // .disablePool()
-    // .host(address.host())
-    // .port(address.port())
-    // .afterNettyContextInit(nettyContext -> {
-    // // add handler to react on remote node closes connection
-    // nettyContext.addHandler(new ChannelInboundHandlerAdapter() {
-    // @Override
-    // public void channelInactive(ChannelHandlerContext ctx) {
-    // monoMap.remove(address);
-    // LOGGER.info("Connection became inactive on {} and removed the pool", address);
-    // ctx.fireChannelInactive();
-    // }
-    // });
-    // }))))
-    // .start()
-    // .subscribe(
-    // rSocket -> {
-    // LOGGER.info("Connected successfully on {}", address);
-    // rSocket.onClose()
-    // .doOnTerminate(() -> {
-    // monoMap.remove(address);
-    // LOGGER.info("Connection closed on {} and removed from the pool", address);
-    // sink.error(new RuntimeException("Connection closed on " + address + " and removed from the pool"));
-    // })
-    // .subscribe();
-    // sink.next(rSocket);
-    // },
-    // throwable -> {
-    // LOGGER.warn("Connect failed on {}, cause: {}", address, throwable);
-    // monoMap.remove(address);
-    // sink.error(throwable);
-    // }));
+      rSocketMono.subscribe(
+          rSocket -> {
+            LOGGER.info("Connected successfully on {}", address);
+            // setup shutdown hook
+            rSocket.onClose()
+                .doOnTerminate(() -> {
+                  monoMap.remove(address);
+                  LOGGER.info("Connection closed on {} and removed from the pool", address);
+                  sink.error(new ConnectionErrorException("Connection closed on " + address));
+                })
+                .subscribe();
+            // emit rSocket
+            sink.next(rSocket);
+          },
+          throwable -> {
+            LOGGER.warn("Connect failed on {}, cause: {}", address, throwable);
+            monoMap.remove(address);
+            // emit connection failed error
+            sink.error(throwable);
+          });
+    }).cache();
   }
 }

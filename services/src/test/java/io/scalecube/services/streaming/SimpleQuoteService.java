@@ -37,4 +37,9 @@ public class SimpleQuoteService implements QuoteService {
   public Mono<String> justNever() {
     return Mono.never();
   }
+
+  @Override
+  public Flux<String> justManyNever() {
+    return Flux.interval(Duration.ofSeconds(1)).map(s -> "quote : " + i.incrementAndGet());
+  }
 }

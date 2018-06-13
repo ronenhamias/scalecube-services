@@ -1,11 +1,13 @@
 package io.scalecube.services.streaming;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import io.scalecube.services.BaseTest;
 import io.scalecube.services.Microservices;
+import io.scalecube.services.ServiceCall;
 import io.scalecube.services.ServiceCall.Call;
 import io.scalecube.services.api.ServiceMessage;
 
@@ -20,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import reactor.core.Disposable;
-import reactor.core.publisher.Flux;
 
 public class StreamingServiceTest extends BaseTest {
 
@@ -51,7 +52,7 @@ public class StreamingServiceTest extends BaseTest {
 
     int expected = 3;
     List<String> list =
-        service.quotes().timeout(Duration.ofSeconds(4)).take(expected).collectList().block();
+        service.quotes().take(Duration.ofSeconds(4)).collectList().block();
 
     assertEquals(expected, list.size());
 
@@ -136,13 +137,13 @@ public class StreamingServiceTest extends BaseTest {
         .services(new SimpleQuoteService())
         .startAwait();
 
-    Call service = gateway.call();
+    ServiceCall serviceCall = gateway.call().create();
 
     ServiceMessage message =
         ServiceMessage.builder().qualifier(QuoteService.NAME, "snapshot").data(batchSize).build();
 
     List<ServiceMessage> serviceMessages =
-        service.create().requestMany(message).timeout(Duration.ofSeconds(5)).collectList().block();
+        serviceCall.requestMany(message).take(Duration.ofSeconds(5)).collectList().block();
 
     assertEquals(batchSize, serviceMessages.size());
 
@@ -186,10 +187,11 @@ public class StreamingServiceTest extends BaseTest {
 
     ServiceMessage justOne = ServiceMessage.builder().qualifier(QuoteService.NAME, "justOne").build();
 
-    List<ServiceMessage> list =
-        Flux.from(service.create().requestOne(justOne)).timeout(Duration.ofSeconds(3)).collectList().block();
+    ServiceMessage message =
+        service.create().requestOne(justOne, String.class).timeout(Duration.ofSeconds(3)).block();
 
-    assertEquals(1, list.size());
+    assertNotNull(message);
+    assertEquals("1", message.<String>data());
 
     gateway.shutdown();
     node.shutdown();
@@ -205,14 +207,14 @@ public class StreamingServiceTest extends BaseTest {
         .services(new SimpleQuoteService())
         .startAwait();
 
-    Call service = gateway.call();
+    ServiceCall serviceCall = gateway.call().create();
 
     ServiceMessage scheduled =
         ServiceMessage.builder().qualifier(QuoteService.NAME, "scheduled").data(1000).build();
 
     int expected = 3;
     List<ServiceMessage> list =
-        service.create().requestMany(scheduled).timeout(Duration.ofSeconds(4)).take(expected).collectList().block();
+        serviceCall.requestMany(scheduled).take(Duration.ofSeconds(4)).collectList().block();
 
     assertEquals(expected, list.size());
 
