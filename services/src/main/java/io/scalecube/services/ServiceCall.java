@@ -191,6 +191,7 @@ public class ServiceCall {
    * @param serviceInterface Service Interface type.
    * @return newly created service proxy object.
    */
+  @SuppressWarnings("unchecked")
   public <T> T api(Class<T> serviceInterface) {
 
     final ServiceCall serviceCall = this;
