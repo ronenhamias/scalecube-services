@@ -324,6 +324,7 @@ public class RemoteServiceTest extends BaseTest {
 
     gateway.cluster().listenMembership()
         .filter(MembershipEvent::isAdded)
+        .distinct(event -> event.member().id())
         .subscribe(event -> allProvidersJoined.countDown());
 
     for (int i = 0; i < numberOfProviders; i++) {
@@ -346,7 +347,7 @@ public class RemoteServiceTest extends BaseTest {
           .distinct()
           .count()
           .block(TIMEOUT);
-      assertEquals(numberOfProviders, numberOfUniqueProviders.intValue());
+      assertEquals(numberOfProviders, numberOfUniqueProviders.intValue(), "attempt #" + i);
     }
 
     providers.forEach(provider -> provider.shutdown().block(TIMEOUT));
