@@ -55,8 +55,10 @@ public class RSocketServiceClientAdapter implements ClientChannel {
     return messageCodec.decode(payload.sliceData(), payload.sliceMetadata());
   }
 
+  @SuppressWarnings("unchecked")
   private <T> Mono<T> listenConnectionClose(RSocket rSocket) {
     return rSocket.onClose()
-        .flatMap(aVoid -> Mono.error(new ConnectionErrorException("Connection closed")));
+        .map(aVoid -> (T) aVoid)
+        .switchIfEmpty(Mono.error(new ConnectionErrorException("Connection closed")));
   }
 }
