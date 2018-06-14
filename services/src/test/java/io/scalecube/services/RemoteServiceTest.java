@@ -13,6 +13,7 @@ import io.scalecube.services.a.b.testing.CanaryTestingRouter;
 import io.scalecube.services.a.b.testing.GreetingServiceImplA;
 import io.scalecube.services.a.b.testing.GreetingServiceImplB;
 import io.scalecube.services.exceptions.InternalServiceException;
+import io.scalecube.services.routing.RoundRobinServiceRouter;
 import io.scalecube.services.routing.Routers;
 
 import org.junit.jupiter.api.AfterEach;
@@ -36,7 +37,7 @@ import reactor.test.StepVerifier;
 
 public class RemoteServiceTest extends BaseTest {
 
-  private static final int TIMEOUT_IN_SEC = 10;
+  private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
   private Microservices gateway;
 
@@ -319,6 +320,8 @@ public class RemoteServiceTest extends BaseTest {
     List<Microservices> providers = new ArrayList<>(numberOfProviders);
     CountDownLatch allProvidersJoined = new CountDownLatch(numberOfProviders);
 
+    Microservices gateway = gateway();
+
     gateway.cluster().listenMembership()
         .filter(MembershipEvent::isAdded)
         .subscribe(event -> allProvidersJoined.countDown());
@@ -330,23 +333,24 @@ public class RemoteServiceTest extends BaseTest {
           .startAwait());
     }
 
-
-    if (!allProvidersJoined.await(TIMEOUT_IN_SEC, TimeUnit.SECONDS)) {
+    if (!allProvidersJoined.await(TIMEOUT.getSeconds(), TimeUnit.SECONDS)) {
       fail("Providers have still joined yet");
     }
 
-    GreetingService service = createProxy(gateway);
+    GreetingService service = gateway.call().router(RoundRobinServiceRouter.class).create().api(GreetingService.class);
+
     for (int i = 0; i < attempts; i++) {
       Long numberOfUniqueProviders = Flux.range(0, numberOfProviders)
           .flatMap(j -> Mono.from(service.greetingRequest(new GreetingRequest("joe" + j)))
               .map(GreetingResponse::sender))
           .distinct()
           .count()
-          .block(Duration.ofSeconds(TIMEOUT_IN_SEC));
+          .block(TIMEOUT);
       assertEquals(numberOfProviders, numberOfUniqueProviders.intValue());
     }
 
-    providers.forEach(provider -> provider.shutdown().block());
+    providers.forEach(provider -> provider.shutdown().block(TIMEOUT));
+    gateway.shutdown().block(TIMEOUT);
   }
 
   @Test
