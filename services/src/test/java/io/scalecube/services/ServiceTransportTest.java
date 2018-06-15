@@ -14,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.net.SocketException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -117,8 +118,7 @@ public class ServiceTransportTest {
     TimeUnit.MILLISECONDS.sleep(100);
 
     assertEquals(0, latch1.getCount());
-    assertEquals(ConnectionErrorException.class, exceptionHolder.get().getClass());
+    assertEquals(SocketException.class, exceptionHolder.get().getClass());
     assertTrue(sub1.get().isDisposed());
   }
-
 }
