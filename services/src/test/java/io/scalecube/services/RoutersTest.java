@@ -3,6 +3,8 @@ package io.scalecube.services;
 import static io.scalecube.services.TestRequests.GREETING_REQUEST_REQ;
 import static io.scalecube.services.TestRequests.GREETING_REQUEST_REQ2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.scalecube.services.ServiceCall.Call;
@@ -12,7 +14,6 @@ import io.scalecube.services.a.b.testing.GreetingServiceImplA;
 import io.scalecube.services.a.b.testing.GreetingServiceImplB;
 import io.scalecube.services.api.ServiceMessage;
 import io.scalecube.services.routing.RandomServiceRouter;
-import io.scalecube.services.routing.Router;
 import io.scalecube.services.routing.Routers;
 
 import org.junit.jupiter.api.AfterEach;
@@ -43,16 +44,11 @@ public class RoutersTest extends BaseTest {
 
   @Test
   public void test_router_factory() {
-    Router router = Routers.getRouter(RandomServiceRouter.class);
-    assertTrue(router != null);
+    assertNotNull(Routers.getRouter(RandomServiceRouter.class));
 
     // dummy router will always throw exception thus cannot be created.
-    Router dummy = Routers.getRouter(DummyRouter.class);
-    assertTrue(dummy == null);
-
+    assertThrows(IllegalArgumentException.class, () -> Routers.getRouter(DummyRouter.class));
   }
-
-
 
   @Test
   public void test_round_robin_selection_logic() {

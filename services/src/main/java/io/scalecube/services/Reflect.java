@@ -13,9 +13,7 @@ import io.scalecube.services.annotations.Service;
 import io.scalecube.services.annotations.ServiceMethod;
 import io.scalecube.services.api.Qualifier;
 import io.scalecube.services.api.ServiceMessage;
-import io.scalecube.services.routing.RoundRobinServiceRouter;
 import io.scalecube.services.routing.Router;
-import io.scalecube.services.routing.Routers;
 
 import com.google.common.base.Strings;
 
@@ -31,7 +29,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -120,16 +117,15 @@ public class Reflect {
         Inject injection = field.getAnnotation(Inject.class);
         Class<? extends Router> routerClass = injection.router();
 
-        if (routerClass == Router.class) {
-          routerClass = RoundRobinServiceRouter.class;
+        final ServiceCall.Call call = this.microservices.call();
+
+        if (!routerClass.isInterface()) {
+          call.router(routerClass);
         }
 
-        Router router = Optional.ofNullable(Routers.getRouter(routerClass)).orElseGet(() -> {
-          LOGGER.warn("Unable to find instance of {} router, used RoundRobinServiceRouter instead", injection.router());
-          return Routers.getRouter(RoundRobinServiceRouter.class);
-        });
+        final Object targetProxy = call.create().api(field.getType());
 
-        setField(field, service, this.microservices.call().router(router).create().api(field.getType()));
+        setField(field, service, targetProxy);
       }
     }
 
