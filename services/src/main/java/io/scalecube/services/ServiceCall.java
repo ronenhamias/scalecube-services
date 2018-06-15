@@ -14,6 +14,8 @@ import io.scalecube.services.transport.LocalServiceHandlers;
 import io.scalecube.services.transport.client.api.ClientTransport;
 import io.scalecube.transport.Address;
 
+import com.google.common.base.Optional;
+
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,8 +114,7 @@ public class ServiceCall {
   public Mono<ServiceMessage> requestOne(ServiceMessage request, Class<?> responseType) {
     String qualifier = request.qualifier();
     if (serviceHandlers.contains(qualifier)) { // local service.
-      return serviceHandlers.get(qualifier)
-          .requestResponse(request)
+      return serviceHandlers.requestResponse(request)
           .onErrorMap(ExceptionProcessor::mapException);
     } else { // remote service.
       return transport.create(addressLookup(request))
@@ -142,8 +143,7 @@ public class ServiceCall {
   public Flux<ServiceMessage> requestMany(ServiceMessage request, Class<?> responseType) {
     String qualifier = request.qualifier();
     if (serviceHandlers.contains(qualifier)) { // local service.
-      return serviceHandlers.get(qualifier)
-          .requestStream(request)
+      return serviceHandlers.requestStream(request)
           .onErrorMap(ExceptionProcessor::mapException);
     } else { // remote service.
       return transport.create(addressLookup(request))
@@ -174,15 +174,14 @@ public class ServiceCall {
       ServiceMessage request = pair.head();
       String qualifier = request.qualifier();
 
-      Flux<ServiceMessage> requestPublisher = Flux.from(pair.tail()).startWith(request);
+      Flux<ServiceMessage> publisher1 = Flux.from(pair.tail()).startWith(request);
 
       if (serviceHandlers.contains(qualifier)) { // local service.
-        return serviceHandlers.get(qualifier)
-            .requestChannel(requestPublisher)
+        return serviceHandlers.requestChannel(publisher1)
             .onErrorMap(ExceptionProcessor::mapException);
       } else { // remote service.
         return transport.create(addressLookup(request))
-            .requestChannel(requestPublisher)
+            .requestChannel(publisher1)
             .map(message -> dataCodec.decode(message, responseType));
       }
     });
@@ -194,6 +193,7 @@ public class ServiceCall {
    * @param serviceInterface Service Interface type.
    * @return newly created service proxy object.
    */
+  @SuppressWarnings("unchecked")
   public <T> T api(Class<T> serviceInterface) {
 
     final ServiceCall serviceCall = this;
@@ -203,9 +203,9 @@ public class ServiceCall {
     return (T) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] {serviceInterface},
         (proxy, method, params) -> {
           MethodInfo methodInfo = genericReturnTypes.get(method);
-          Object check = objectToStringEqualsHashCode(method.getName(), serviceInterface, params);
-          if (check != null) {
-            return check; // toString, hashCode was invoked.
+          Optional<Object> check = toStringOrEqualsOrHashCode(method.getName(), serviceInterface, params);
+          if (check.isPresent()) {
+            return check.get(); // toString, hashCode was invoked.
           }
 
           ServiceMessage request = ServiceMessage.builder()
@@ -246,15 +246,27 @@ public class ServiceCall {
     return new ServiceUnavailableException("No reachable member with such service: " + request.qualifier());
   }
 
-  private static Object objectToStringEqualsHashCode(String method, Class<?> serviceInterface, Object... args) {
-    if ("hashCode".equals(method)) {
-      return serviceInterface.hashCode();
-    } else if ("equals".equals(method)) {
-      return serviceInterface.equals(args[0]);
-    } else if ("toString".equals(method)) {
-      return serviceInterface.toString();
-    } else {
-      return null;
+  /**
+   * check and handle toString or equals or hashcode method where invoked.
+   * 
+   * @param method that was invoked.
+   * @param serviceInterface for a given service interface.
+   * @param args parameters that where invoked.
+   * @return Optional object as result of to string equals or hashCode result or absent if none of these where invoked.
+   */
+  private static Optional<Object> toStringOrEqualsOrHashCode(String method, Class<?> serviceInterface,
+      Object... args) {
+
+    switch (method) {
+      case "toString":
+        return Optional.of(serviceInterface.toString());
+      case "equals":
+        return Optional.of(serviceInterface.equals(args[0]));
+      case "hashCode":
+        return Optional.of(serviceInterface.hashCode());
+
+      default:
+        return Optional.absent();
     }
   }
 }

@@ -6,6 +6,7 @@ import io.scalecube.services.transport.client.api.ClientChannel;
 
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
+import io.rsocket.exceptions.ConnectionErrorException;
 import io.rsocket.util.ByteBufPayload;
 
 import org.reactivestreams.Publisher;
@@ -26,21 +27,23 @@ public class RSocketServiceClientAdapter implements ClientChannel {
   @Override
   public Mono<ServiceMessage> requestResponse(ServiceMessage message) {
     return rSocket
-        .flatMap(rSocket -> rSocket.requestResponse(toPayload(message)))
+        .flatMap(rSocket -> rSocket.requestResponse(toPayload(message)).or(listenConnectionClose(rSocket)))
         .map(this::toMessage);
   }
 
   @Override
   public Flux<ServiceMessage> requestStream(ServiceMessage message) {
     return rSocket
-        .flatMapMany(rSocket -> rSocket.requestStream(toPayload(message)))
+        .flatMapMany(rSocket -> rSocket.requestStream(toPayload(message)).or(listenConnectionClose(rSocket)))
         .map(this::toMessage);
   }
 
   @Override
   public Flux<ServiceMessage> requestChannel(Publisher<ServiceMessage> publisher) {
     return rSocket
-        .flatMapMany(rSocket -> rSocket.requestChannel(Flux.from(publisher).map(this::toPayload)))
+        .flatMapMany(rSocket -> rSocket
+            .requestChannel(Flux.from(publisher).map(this::toPayload))
+            .or(listenConnectionClose(rSocket)))
         .map(this::toMessage);
   }
 
@@ -50,5 +53,12 @@ public class RSocketServiceClientAdapter implements ClientChannel {
 
   private ServiceMessage toMessage(Payload payload) {
     return messageCodec.decode(payload.sliceData(), payload.sliceMetadata());
+  }
+
+  @SuppressWarnings("unchecked")
+  private <T> Mono<T> listenConnectionClose(RSocket rSocket) {
+    return rSocket.onClose()
+        .map(aVoid -> (T) aVoid)
+        .switchIfEmpty(Mono.error(new ConnectionErrorException("Connection closed")));
   }
 }
