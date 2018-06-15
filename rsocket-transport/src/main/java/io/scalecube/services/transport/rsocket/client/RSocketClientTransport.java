@@ -23,18 +23,18 @@ public class RSocketClientTransport implements ClientTransport {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RSocketClientTransport.class);
 
-  private final FastThreadLocal<Map<Address, Mono<RSocket>>> rSockets =
-      new FastThreadLocal<Map<Address, Mono<RSocket>>>() {
-        @Override
-        protected Map<Address, Mono<RSocket>> initialValue() {
-          return new ConcurrentHashMap<>();
-        }
-      };
+  private final FastThreadLocal<Map<Address, Mono<RSocket>>> rSockets;
 
   private final ServiceMessageCodec codec;
 
   public RSocketClientTransport(ServiceMessageCodec codec) {
     this.codec = codec;
+    this.rSockets = new FastThreadLocal<Map<Address, Mono<RSocket>>>() {
+      @Override
+      protected Map<Address, Mono<RSocket>> initialValue() {
+        return new ConcurrentHashMap<>();
+      }
+    };
   }
 
   @Override
