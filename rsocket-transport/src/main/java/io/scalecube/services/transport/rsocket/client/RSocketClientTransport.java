@@ -5,6 +5,7 @@ import io.scalecube.services.transport.client.api.ClientChannel;
 import io.scalecube.services.transport.client.api.ClientTransport;
 import io.scalecube.transport.Address;
 
+import io.netty.util.concurrent.FastThreadLocal;
 import io.rsocket.RSocket;
 import io.rsocket.RSocketFactory;
 import io.rsocket.transport.netty.client.TcpClientTransport;
@@ -22,17 +23,23 @@ public class RSocketClientTransport implements ClientTransport {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RSocketClientTransport.class);
 
-  private final Map<Address, Mono<RSocket>> rSockets = new ConcurrentHashMap<>();
+  private final FastThreadLocal<Map<Address, Mono<RSocket>>> rSockets;
 
   private final ServiceMessageCodec codec;
 
   public RSocketClientTransport(ServiceMessageCodec codec) {
     this.codec = codec;
+    this.rSockets = new FastThreadLocal<Map<Address, Mono<RSocket>>>() {
+      @Override
+      protected Map<Address, Mono<RSocket>> initialValue() {
+        return new ConcurrentHashMap<>();
+      }
+    };
   }
 
   @Override
   public ClientChannel create(Address address) {
-    final Map<Address, Mono<RSocket>> monoMap = rSockets; // keep reference for threadsafety
+    final Map<Address, Mono<RSocket>> monoMap = rSockets.get(); // keep reference for threadsafety
     Mono<RSocket> rSocket = monoMap.computeIfAbsent(address, address1 -> connect(address1, monoMap));
     return new RSocketServiceClientAdapter(rSocket, codec);
   }
@@ -40,6 +47,7 @@ public class RSocketClientTransport implements ClientTransport {
   private static Mono<RSocket> connect(Address address, Map<Address, Mono<RSocket>> monoMap) {
     TcpClient tcpClient =
         TcpClient.create(options -> options.disablePool()
+            .preferNative(false)
             .host(address.host())
             .port(address.port()));
 

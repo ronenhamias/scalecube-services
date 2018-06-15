@@ -37,6 +37,7 @@ public class RSocketServerTransport implements ServerTransport {
   public InetSocketAddress bindAwait(InetSocketAddress address, ServiceMessageHandler acceptor) {
     TcpServer tcpServer =
         TcpServer.create(options -> options
+            .preferNative(false)
             .listenAddress(address)
             .afterNettyContextInit(nettyContext -> {
               LOGGER.info("Accepted connection on {}", nettyContext.channel());
