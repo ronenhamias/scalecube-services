@@ -5,6 +5,7 @@ import io.scalecube.services.transport.client.api.ClientChannel;
 import io.scalecube.services.transport.client.api.ClientTransport;
 import io.scalecube.transport.Address;
 
+import io.netty.util.concurrent.FastThreadLocal;
 import io.rsocket.RSocket;
 import io.rsocket.RSocketFactory;
 import io.rsocket.transport.netty.client.TcpClientTransport;
@@ -22,7 +23,13 @@ public class RSocketClientTransport implements ClientTransport {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RSocketClientTransport.class);
 
-  private final ThreadLocal<Map<Address, Mono<RSocket>>> rSockets = ThreadLocal.withInitial(ConcurrentHashMap::new);
+  private final FastThreadLocal<Map<Address, Mono<RSocket>>> rSockets =
+      new FastThreadLocal<Map<Address, Mono<RSocket>>>() {
+        @Override
+        protected Map<Address, Mono<RSocket>> initialValue() {
+          return new ConcurrentHashMap<>();
+        }
+      };
 
   private final ServiceMessageCodec codec;
 
