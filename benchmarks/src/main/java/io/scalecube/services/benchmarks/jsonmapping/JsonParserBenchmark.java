@@ -28,6 +28,8 @@ public class JsonParserBenchmark {
   private static final String INPUT;
   private static final ByteBuf BYTE_BUF;
   private static final ServiceMessageMapper MAPPER = new ServiceMessageMapper();
+  private static final ServiceMessageMapperLookForOnlyQualifier MAPPER_LOOK_FOR_ONLY_QUALIFIER =
+      new ServiceMessageMapperLookForOnlyQualifier();
   private static final LegacyServiceMessageMapper LEGACY_MAPPER = new LegacyServiceMessageMapper();
 
   static {
@@ -35,7 +37,7 @@ public class JsonParserBenchmark {
         "{" +
             "\"q\":\"/hello/goodbye\"," +
             "\"dataType\":\"pojo.class\"," +
-            "\"data\":" + getStringData() + "," +
+            "\"data\":" + getObjectData() + "," +
             "\"unknown\":\"someValue\"" +
             "}";
     BYTE_BUF = Unpooled.copiedBuffer(INPUT.getBytes());
@@ -54,6 +56,13 @@ public class JsonParserBenchmark {
   @Benchmark
   public void testJsonParser(Blackhole bh) {
     bh.consume(MAPPER.decode(BYTE_BUF));
+  }
+
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Benchmark
+  public void testJsonParserLookForOnlyQualifier(Blackhole bh) {
+    bh.consume(MAPPER_LOOK_FOR_ONLY_QUALIFIER.decode(BYTE_BUF));
   }
 
   @BenchmarkMode(Mode.AverageTime)
