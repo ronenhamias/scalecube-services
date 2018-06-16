@@ -1,11 +1,7 @@
-package io.scalecube.services.benchmarks;
+package io.scalecube.services.benchmarks.jsonmapping;
 
-import io.scalecube.services.api.ServiceMessage;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.io.SerializedString;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -17,138 +13,54 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.IOException;
-import java.io.StringReader;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Fork(1)
 @Threads(Threads.MAX)
-@Warmup(iterations = 3)
-@Measurement(iterations = 3)
+@Warmup(iterations = 1)
+@Measurement(iterations = 2)
 @State(Scope.Benchmark)
 public class JsonParserBenchmark {
 
   private static final String INPUT;
-  public static final SerializedString QUALIFIER = new SerializedString("q");
-  public static final SerializedString TYPE = new SerializedString("_type");
+  private static final ByteBuf BYTE_BUF;
+  private static final ServiceMessageMapper MAPPER = new ServiceMessageMapper();
+  private static final LegacyServiceMessageMapper LEGACY_MAPPER = new LegacyServiceMessageMapper();
 
   static {
     INPUT =
         "{" +
             "\"q\":\"/hello/goodbye\"," +
-            "\"_type\":\"pojo.class\"," +
-            "\"data\":" + 1 + "," +
+            "\"dataType\":\"pojo.class\"," +
+            "\"data\":" + getStringData() + "," +
             "\"unknown\":\"someValue\"" +
             "}";
+    BYTE_BUF = Unpooled.copiedBuffer(INPUT.getBytes());
   }
 
-  static final JsonFactory JSON_FACTORY = new JsonFactory();
 
-  public static void main(String[] args) throws IOException {
-    System.out.println(INPUT);
-    JsonParser jsonParser = JSON_FACTORY.createParser(new StringReader(INPUT));
+  // public static void main(String[] args) {
+  // ServiceMessage2 message = LEGACY_MAPPER.decode(BYTE_BUF);
+  // System.out.println(message.qualifier());
+  // System.out.println(message.dataType());
+  // System.out.println(message.headers());
+  // }
 
-    ServiceMessage.Builder builder = ServiceMessage.builder();
-
-
-    JsonToken current = jsonParser.nextToken();
-    if (current != JsonToken.START_OBJECT) {
-      System.out.println("Error: root should be object: quiting.");
-      return;
-    }
-
-    while (jsonParser.nextToken() != JsonToken.END_OBJECT) {
-      String fieldName = jsonParser.getCurrentName();
-      // move from field name to field value
-      current = jsonParser.nextToken();
-      System.out.println("fieldName = " + fieldName + ", currentToken = " + current.asString());
-
-      switch (fieldName) {
-        case "q": {
-          // String value = jsonParser.getText();
-          String value = jsonParser.getValueAsString();
-          builder.qualifier(value);
-          break;
-        }
-        case "_type": {
-          String value = jsonParser.getValueAsString();
-          System.out.println("_type = " + value);
-          builder.dataFormat(value); // todo data_type
-          break;
-        }
-        case "unknown": {
-          String value = jsonParser.getValueAsString();
-          System.out.println("unknown = " + value);
-          break;
-        }
-        case "data": {
-          switch (current) {
-            case START_ARRAY: {
-              System.out.println("START_ARRAY");
-              jsonParser.skipChildren();
-              break;
-            }
-            case START_OBJECT: {
-              System.out.println("START_OBJECT");
-              jsonParser.skipChildren();
-              break;
-            }
-            case VALUE_STRING: {
-              System.out.println("VALUE_STRING");
-              break;
-            }
-            default: {
-              System.err.println("default: " + current);
-              // todo nothing (skip) or set data (left only primitives)
-              break;
-            }
-          }
-          break;
-        }
-        default: {
-          System.err.println("fieldName: " + fieldName);
-        }
-
-      }
-    }
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Benchmark
+  public void testJsonParser(Blackhole bh) {
+    bh.consume(MAPPER.decode(BYTE_BUF));
   }
 
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Benchmark
-  public void testJsonParser() throws IOException {
-    JsonParser jsonParser = JSON_FACTORY.createParser(new StringReader(INPUT));
-    jsonParser.nextToken(); // {
-
-    jsonParser.nextFieldName(); // "q"
-    jsonParser.nextTextValue();
-
-    jsonParser.nextFieldName(); // "_type"
-    jsonParser.nextTextValue();
-
-    jsonParser.nextFieldName();// data
-    jsonParser.skipChildren();
-
-    JsonToken jsonToken = null;
-
-    while ((jsonToken = jsonParser.nextToken()) != null) {
-
-    }
-
-
-    // String fieldName = jsonParser.nextFieldName();// unknown
-    // System.out.println(fieldName);
-    // String s = jsonParser.nextToken().asString();
-    // System.out.println(s);
-    // while (true) {
-    // // jsonParser.nextToken() != JsonToken.END_OBJECT
-    //
-    // // get the current token
-    // String fieldname = jsonParser.getCurrentName();
-    //
-    // System.out.println(fieldname);
-    // }
+  public void testLegacyJsonParser(Blackhole bh) {
+    bh.consume(LEGACY_MAPPER.decode(BYTE_BUF));
   }
 
   private static String getArrayData() {
@@ -660,8 +572,8 @@ public class JsonParserBenchmark {
 
   private static String getStringData() {
     StringBuilder stringBuilder = new StringBuilder("\"");
-    for (int i = 0; i < 100; i++) {
-      stringBuilder.append("a1234567890q");
+    for (int i = 0; i < 1000; i++) {
+      stringBuilder.append(UUID.randomUUID());
     }
     return stringBuilder.append("\"").toString();
   }
