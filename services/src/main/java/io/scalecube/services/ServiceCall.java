@@ -1,5 +1,7 @@
 package io.scalecube.services;
 
+import static io.scalecube.services.CommunicationMode.REQUEST_CHANNEL;
+
 import io.scalecube.services.api.NullData;
 import io.scalecube.services.api.ServiceMessage;
 import io.scalecube.services.codec.ServiceMessageDataCodec;
@@ -203,31 +205,44 @@ public class ServiceCall {
     return (T) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] {serviceInterface},
         (proxy, method, params) -> {
           MethodInfo methodInfo = genericReturnTypes.get(method);
+
           Optional<Object> check = toStringOrEqualsOrHashCode(method.getName(), serviceInterface, params);
           if (check.isPresent()) {
             return check.get(); // toString, hashCode was invoked.
           }
-
-          ServiceMessage request = ServiceMessage.builder()
-              .qualifier(methodInfo.serviceName(), method.getName())
-              .data(method.getParameterCount() != 0 ? params[0] : NullData.NULL_DATA)
-              .build();
-
           Metrics.mark(serviceInterface, metrics, method, "request");
+          if (!methodInfo.communicationMode().equals(REQUEST_CHANNEL)) {
+            ServiceMessage request = ServiceMessage.builder()
+                .qualifier(methodInfo.serviceName(), method.getName())
+                .data(method.getParameterCount() != 0 ? params[0] : NullData.NULL_DATA)
+                .build();
 
-          switch (methodInfo.communicationMode()) {
-            case FIRE_AND_FORGET:
-              return serviceCall.oneWay(request);
-            case REQUEST_RESPONSE:
-              return serviceCall.requestOne(request, methodInfo.parameterizedReturnType())
-                  .transform(mono -> methodInfo.isRequestTypeServiceMessage() ? mono : mono.map(ServiceMessage::data));
-            case REQUEST_STREAM:
-              return serviceCall.requestMany(request, methodInfo.parameterizedReturnType())
-                  .transform(flux -> methodInfo.isRequestTypeServiceMessage() ? flux : flux.map(ServiceMessage::data));
-            case REQUEST_CHANNEL:
-              // falls to default
-            default:
-              throw new IllegalArgumentException("Communication mode is not supported: " + method);
+            switch (methodInfo.communicationMode()) {
+              case FIRE_AND_FORGET:
+                return serviceCall.oneWay(request);
+              case REQUEST_RESPONSE:
+                return serviceCall.requestOne(request, methodInfo.parameterizedReturnType())
+                    .transform(
+                        mono -> methodInfo.isRequestTypeServiceMessage() ? mono : mono.map(ServiceMessage::data));
+              case REQUEST_STREAM:
+                return serviceCall.requestMany(request, methodInfo.parameterizedReturnType())
+                    .transform(
+                        flux -> methodInfo.isRequestTypeServiceMessage() ? flux : flux.map(ServiceMessage::data));
+              default:
+                throw new IllegalArgumentException("Communication mode is not supported: " + method);
+            }
+          } else if (methodInfo.communicationMode().equals(REQUEST_CHANNEL)) {
+            // if this is REQUEST_CHANNEL it means params[0] must be publisher thus its safe to cast.
+            Flux<ServiceMessage> request = Flux.from((Publisher) params[0])
+                .map(data -> ServiceMessage.builder()
+                    .qualifier(methodInfo.serviceName(), method.getName())
+                    .data(method.getParameterCount() != 0 ? data : NullData.NULL_DATA)
+                    .build());
+
+            return serviceCall.requestBidirectional(request, methodInfo.parameterizedReturnType())
+                .transform(flux -> methodInfo.isRequestTypeServiceMessage() ? flux : flux.map(ServiceMessage::data));
+          } else {
+            throw new IllegalArgumentException("Communication mode is not supported: " + method);
           }
         });
   }

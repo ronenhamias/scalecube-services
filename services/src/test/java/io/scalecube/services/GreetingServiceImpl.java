@@ -4,6 +4,7 @@ import io.scalecube.services.annotations.Inject;
 import io.scalecube.services.api.ServiceMessage;
 import io.scalecube.services.exceptions.UnauthorizedException;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public final class GreetingServiceImpl implements GreetingService {
@@ -58,6 +59,11 @@ public final class GreetingServiceImpl implements GreetingService {
   public Mono<GreetingResponse> greetingRequest(GreetingRequest request) {
     print(instanceId + ":[greetingRequest] Hello... i am a service an just recived a message:" + request);
     return Mono.just(new GreetingResponse(" hello to: " + request.getName(), "" + instanceId));
+  }
+
+  @Override
+  public Flux<GreetingResponse> bidiGreeting(Flux<GreetingRequest> request) {
+    return request.map(onNext -> new GreetingResponse(" hello to: " + onNext.getName(), "" + instanceId));
   }
 
   @Override

@@ -21,6 +21,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 
+import reactor.core.publisher.EmitterProcessor;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,10 +35,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 public class RemoteServiceTest extends BaseTest {
 
@@ -258,6 +259,37 @@ public class RemoteServiceTest extends BaseTest {
     Publisher<GreetingResponse> future = service.greetingRequest(new GreetingRequest("joe"));
 
     assertTrue(" hello to: joe".equals(Mono.from(future).block(Duration.ofSeconds(10000)).getResult()));
+
+    provider.shutdown().block();
+    consumer.shutdown().block();
+  }
+
+  @Test
+  public void test_remote__bidi_greeting_expect_GreetingResponse() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+        .seeds(provider.cluster().address())
+        .startAwait();
+
+    // get a proxy to the service api.
+    GreetingService service = createProxy(consumer);
+
+    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
+    // call the service.
+    Flux<GreetingResponse> responses = service.bidiGreeting(requests);
+
+    requests.onNext(new GreetingRequest("joe-1"));
+    requests.onNext(new GreetingRequest("joe-2"));
+    requests.onNext(new GreetingRequest("joe-3"));
+    requests.onComplete();
+
+    String resp = responses.blockLast(Duration.ofSeconds(10)).getResult();
+    assertTrue(" hello to: joe-3".equals(resp));
 
     provider.shutdown().block();
     consumer.shutdown().block();
