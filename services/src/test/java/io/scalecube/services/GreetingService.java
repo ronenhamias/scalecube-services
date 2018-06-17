@@ -51,4 +51,7 @@ public interface GreetingService {
 
   @ServiceMethod
   Flux<GreetingResponse> bidiGreeting(Flux<GreetingRequest> request);
+
+  @ServiceMethod
+  Flux<GreetingResponse> bidiGreetingError(Flux<GreetingRequest> request);
 }

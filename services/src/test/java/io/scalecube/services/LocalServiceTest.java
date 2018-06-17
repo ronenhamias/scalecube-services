@@ -14,8 +14,6 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.time.Duration;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -231,24 +229,24 @@ public class LocalServiceTest extends BaseTest {
 
     EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
     // call the service.
-    Flux<GreetingResponse> responses = service.bidiGreeting(requests);
+    Flux<GreetingResponse> responses = service.bidiGreetingError(requests);
+
+    // call the service.
 
     requests.onNext(new GreetingRequest("joe-1"));
     requests.onNext(new GreetingRequest("joe-2"));
     requests.onNext(new GreetingRequest("joe-3"));
     requests.onComplete();
 
-    String resp = responses.blockLast(Duration.ofSeconds(10)).getResult();
-    assertTrue(" hello to: joe-3".equals(resp));
+    StepVerifier.create(responses)
+        .expectErrorMessage("Not authorized")
+        .verify(Duration.ofSeconds(3));
 
     provider.shutdown().block();
   }
-  
+
   private GreetingService createProxy(Microservices gateway) {
     return gateway.call().create().api(GreetingService.class); // create proxy for GreetingService API
   }
 
-  private boolean await(CountDownLatch timeLatch, long timeout, TimeUnit timeUnit) throws Exception {
-    return timeLatch.await(timeout, timeUnit);
-  }
 }

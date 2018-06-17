@@ -296,6 +296,69 @@ public class RemoteServiceTest extends BaseTest {
   }
 
   @Test
+  public void test_remote__bidi_greeting_expect_UnauthorizedException() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+        .seeds(provider.cluster().address())
+        .startAwait();
+
+    // get a proxy to the service api.
+    GreetingService service = createProxy(consumer);
+
+    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
+    // call the service.
+    Flux<GreetingResponse> responses = service.bidiGreetingError(requests);
+
+    requests.onNext(new GreetingRequest("joe-1"));
+    requests.onNext(new GreetingRequest("joe-2"));
+    requests.onNext(new GreetingRequest("joe-3"));
+    requests.onComplete();
+
+    String resp = responses.blockLast(Duration.ofSeconds(10)).getResult();
+    assertTrue(" hello to: joe-3".equals(resp));
+
+    provider.shutdown().block();
+    consumer.shutdown().block();
+  }
+
+  @Test
+  public void test_local_bidi_greeting_expect_GreetingResponse() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+        .seeds(provider.cluster().address())
+        .startAwait();
+
+    // get a proxy to the service api.
+    GreetingService service = createProxy(consumer);
+
+    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
+    // call the service.
+    Flux<GreetingResponse> responses = service.bidiGreetingError(requests);
+
+    // call the service.
+
+    requests.onNext(new GreetingRequest("joe-1"));
+    requests.onComplete();
+
+    StepVerifier.create(responses)
+        .expectErrorMessage("Not authorized")
+        .verify(Duration.ofSeconds(3));
+
+    consumer.shutdown().block();
+    provider.shutdown().block();
+  }
+
+  @Test
   public void test_remote_greeting_request_timeout_expires() {
     // Create microservices cluster.
     Microservices provider = Microservices.builder()
