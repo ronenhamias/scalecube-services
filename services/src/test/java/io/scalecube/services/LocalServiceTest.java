@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import reactor.core.publisher.EmitterProcessor;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -217,6 +219,31 @@ public class LocalServiceTest extends BaseTest {
     microservices.shutdown().block();
   }
 
+  @Test
+  public void test_local_bidi_greeting_expect_GreetingResponse() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // get a proxy to the service api.
+    GreetingService service = createProxy(provider);
+
+    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
+    // call the service.
+    Flux<GreetingResponse> responses = service.bidiGreeting(requests);
+
+    requests.onNext(new GreetingRequest("joe-1"));
+    requests.onNext(new GreetingRequest("joe-2"));
+    requests.onNext(new GreetingRequest("joe-3"));
+    requests.onComplete();
+
+    String resp = responses.blockLast(Duration.ofSeconds(10)).getResult();
+    assertTrue(" hello to: joe-3".equals(resp));
+
+    provider.shutdown().block();
+  }
+  
   private GreetingService createProxy(Microservices gateway) {
     return gateway.call().create().api(GreetingService.class); // create proxy for GreetingService API
   }
