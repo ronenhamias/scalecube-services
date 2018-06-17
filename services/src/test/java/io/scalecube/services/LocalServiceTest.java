@@ -218,7 +218,33 @@ public class LocalServiceTest extends BaseTest {
   }
 
   @Test
-  public void test_local_bidi_greeting_expect_GreetingResponse() {
+  public void test_local_bidi_greeting_expect_IllegalArgumentException() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // get a proxy to the service api.
+    GreetingService service = createProxy(provider);
+
+    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
+
+    // call the service. bidiThrowingGreeting
+    Flux<GreetingResponse> responses = service.bidiThrowingGreeting(requests);
+    // call the service.
+
+    requests.onNext(new GreetingRequest("IllegalArgumentException"));
+    requests.onComplete();
+
+    StepVerifier.create(responses)
+        .expectErrorMessage("IllegalArgumentException")
+        .verify(Duration.ofSeconds(3));
+
+    provider.shutdown().block();
+  }
+
+  @Test
+  public void test_local_bidi_greeting_expect_NotAuthorized() {
     // Create microservices cluster.
     Microservices provider = Microservices.builder()
         .services(new GreetingServiceImpl())
@@ -234,12 +260,41 @@ public class LocalServiceTest extends BaseTest {
     // call the service.
 
     requests.onNext(new GreetingRequest("joe-1"));
+    requests.onComplete();
+
+    StepVerifier.create(responses)
+        .expectErrorMessage("Not authorized")
+        .verify(Duration.ofSeconds(3));
+
+    provider.shutdown().block();
+  }
+
+  @Test
+  public void test_local_bidi_greeting_expect_GreetingResponse() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // get a proxy to the service api.
+    GreetingService service = createProxy(provider);
+
+    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
+    // call the service.
+    Flux<GreetingResponse> responses = service.bidiGreeting(requests);
+
+    // call the service.
+
+    requests.onNext(new GreetingRequest("joe-1"));
     requests.onNext(new GreetingRequest("joe-2"));
     requests.onNext(new GreetingRequest("joe-3"));
     requests.onComplete();
 
     StepVerifier.create(responses)
-        .expectErrorMessage("Not authorized")
+        .expectNextMatches(resp -> resp.getResult().equals(" hello to: joe-1"))
+        .expectNextMatches(resp -> resp.getResult().equals(" hello to: joe-2"))
+        .expectNextMatches(resp -> resp.getResult().equals(" hello to: joe-3"))
+        .expectComplete()
         .verify(Duration.ofSeconds(3));
 
     provider.shutdown().block();

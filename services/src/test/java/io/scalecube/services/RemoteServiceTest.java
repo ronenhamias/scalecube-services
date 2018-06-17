@@ -264,99 +264,7 @@ public class RemoteServiceTest extends BaseTest {
     consumer.shutdown().block();
   }
 
-  @Test
-  public void test_remote__bidi_greeting_expect_GreetingResponse() {
-    // Create microservices cluster.
-    Microservices provider = Microservices.builder()
-        .services(new GreetingServiceImpl())
-        .startAwait();
 
-    // Create microservices cluster.
-    Microservices consumer = Microservices.builder()
-        .seeds(provider.cluster().address())
-        .startAwait();
-
-    // get a proxy to the service api.
-    GreetingService service = createProxy(consumer);
-
-    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
-    // call the service.
-    Flux<GreetingResponse> responses = service.bidiGreeting(requests);
-
-    requests.onNext(new GreetingRequest("joe-1"));
-    requests.onNext(new GreetingRequest("joe-2"));
-    requests.onNext(new GreetingRequest("joe-3"));
-    requests.onComplete();
-
-    String resp = responses.blockLast(Duration.ofSeconds(10)).getResult();
-    assertTrue(" hello to: joe-3".equals(resp));
-
-    provider.shutdown().block();
-    consumer.shutdown().block();
-  }
-
-  @Test
-  public void test_remote__bidi_greeting_expect_UnauthorizedException() {
-    // Create microservices cluster.
-    Microservices provider = Microservices.builder()
-        .services(new GreetingServiceImpl())
-        .startAwait();
-
-    // Create microservices cluster.
-    Microservices consumer = Microservices.builder()
-        .seeds(provider.cluster().address())
-        .startAwait();
-
-    // get a proxy to the service api.
-    GreetingService service = createProxy(consumer);
-
-    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
-    // call the service.
-    Flux<GreetingResponse> responses = service.bidiGreetingError(requests);
-
-    requests.onNext(new GreetingRequest("joe-1"));
-    requests.onNext(new GreetingRequest("joe-2"));
-    requests.onNext(new GreetingRequest("joe-3"));
-    requests.onComplete();
-
-    String resp = responses.blockLast(Duration.ofSeconds(10)).getResult();
-    assertTrue(" hello to: joe-3".equals(resp));
-
-    provider.shutdown().block();
-    consumer.shutdown().block();
-  }
-
-  @Test
-  public void test_local_bidi_greeting_expect_GreetingResponse() {
-    // Create microservices cluster.
-    Microservices provider = Microservices.builder()
-        .services(new GreetingServiceImpl())
-        .startAwait();
-
-    // Create microservices cluster.
-    Microservices consumer = Microservices.builder()
-        .seeds(provider.cluster().address())
-        .startAwait();
-
-    // get a proxy to the service api.
-    GreetingService service = createProxy(consumer);
-
-    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
-    // call the service.
-    Flux<GreetingResponse> responses = service.bidiGreetingError(requests);
-
-    // call the service.
-
-    requests.onNext(new GreetingRequest("joe-1"));
-    requests.onComplete();
-
-    StepVerifier.create(responses)
-        .expectErrorMessage("Not authorized")
-        .verify(Duration.ofSeconds(3));
-
-    consumer.shutdown().block();
-    provider.shutdown().block();
-  }
 
   @Test
   public void test_remote_greeting_request_timeout_expires() {
@@ -549,6 +457,108 @@ public class RemoteServiceTest extends BaseTest {
     String response = service.callGreetingWithDispatcher("joe").block(Duration.ofSeconds(5));
     assertEquals(response, " hello to: joe");
 
+    provider.shutdown().block();
+  }
+
+  @Test
+  public void test_remote_bidi_greeting_expect_IllegalArgumentException() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+        .seeds(provider.cluster().address())
+        .startAwait();
+
+    // get a proxy to the service api.
+    GreetingService service = createProxy(consumer);
+
+    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
+
+    // call the service. bidiThrowingGreeting
+    Flux<GreetingResponse> responses = service.bidiThrowingGreeting(requests);
+    // call the service.
+
+    requests.onNext(new GreetingRequest("IllegalArgumentException"));
+    requests.onComplete();
+
+    StepVerifier.create(responses)
+        .expectErrorMessage("IllegalArgumentException")
+        .verify(Duration.ofSeconds(3));
+
+    consumer.shutdown().block();
+    provider.shutdown().block();
+  }
+
+  @Test
+  public void test_remote_bidi_greeting_expect_NotAuthorized() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+        .seeds(provider.cluster().address())
+        .startAwait();
+
+    // get a proxy to the service api.
+    GreetingService service = createProxy(consumer);
+
+    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
+    // call the service.
+    Flux<GreetingResponse> responses = service.bidiGreetingError(requests);
+
+    // call the service.
+
+    requests.onNext(new GreetingRequest("joe-1"));
+    requests.onComplete();
+
+    StepVerifier.create(responses)
+        .expectErrorMessage("Not authorized")
+        .verify(Duration.ofSeconds(3));
+
+    consumer.shutdown().block();
+    provider.shutdown().block();
+  }
+
+  @Test
+  public void test_remote_bidi_greeting_expect_GreetingResponse() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+        .seeds(provider.cluster().address())
+        .startAwait();
+
+
+    // get a proxy to the service api.
+    GreetingService service = createProxy(consumer);
+
+    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
+    // call the service.
+    Flux<GreetingResponse> responses = service.bidiGreeting(requests);
+
+    // call the service.
+
+    requests.onNext(new GreetingRequest("joe-1"));
+    requests.onNext(new GreetingRequest("joe-2"));
+    requests.onNext(new GreetingRequest("joe-3"));
+    requests.onComplete();
+
+    StepVerifier.create(responses)
+        .expectNextMatches(resp -> resp.getResult().equals(" hello to: joe-1"))
+        .expectNextMatches(resp -> resp.getResult().equals(" hello to: joe-2"))
+        .expectNextMatches(resp -> resp.getResult().equals(" hello to: joe-3"))
+        .expectComplete()
+        .verify(Duration.ofSeconds(3));
+
+    consumer.shutdown().block();
     provider.shutdown().block();
   }
 

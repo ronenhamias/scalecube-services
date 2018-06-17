@@ -72,6 +72,12 @@ public final class GreetingServiceImpl implements GreetingService {
   }
 
   @Override
+  public Flux<GreetingResponse> bidiThrowingGreeting(Flux<GreetingRequest> request) {
+    throw new IllegalArgumentException("IllegalArgumentException");
+  }
+
+
+  @Override
   public Mono<ServiceMessage> greetingMessage(ServiceMessage request) {
     print("[greetingMessage] Hello... i am a service an just recived a message:" + request);
     GreetingResponse resp = new GreetingResponse(" hello to: " + request.data(), "1");
