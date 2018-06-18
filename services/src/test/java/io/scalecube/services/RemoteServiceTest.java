@@ -478,7 +478,7 @@ public class RemoteServiceTest extends BaseTest {
     EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
 
     // call the service. bidiThrowingGreeting
-    Flux<GreetingResponse> responses = service.bidiThrowingGreeting(requests);
+    Flux<GreetingResponse> responses = service.bidiGreetingIllegalArgumentException(requests);
     // call the service.
 
     requests.onNext(new GreetingRequest("IllegalArgumentException"));
@@ -509,7 +509,7 @@ public class RemoteServiceTest extends BaseTest {
 
     EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
     // call the service.
-    Flux<GreetingResponse> responses = service.bidiGreetingError(requests);
+    Flux<GreetingResponse> responses = service.bidiGreetingNotAuthorized(requests);
 
     // call the service.
 

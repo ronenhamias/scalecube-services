@@ -67,12 +67,12 @@ public final class GreetingServiceImpl implements GreetingService {
   }
 
   @Override
-  public Flux<GreetingResponse> bidiGreetingError(Flux<GreetingRequest> request) {
+  public Flux<GreetingResponse> bidiGreetingNotAuthorized(Flux<GreetingRequest> request) {
     return Flux.error(new UnauthorizedException(500, "Not authorized"));
   }
 
   @Override
-  public Flux<GreetingResponse> bidiThrowingGreeting(Flux<GreetingRequest> request) {
+  public Flux<GreetingResponse> bidiGreetingIllegalArgumentException(Flux<GreetingRequest> request) {
     throw new IllegalArgumentException("IllegalArgumentException");
   }
 

@@ -53,8 +53,8 @@ public interface GreetingService {
   Flux<GreetingResponse> bidiGreeting(Flux<GreetingRequest> request);
 
   @ServiceMethod
-  Flux<GreetingResponse> bidiGreetingError(Flux<GreetingRequest> request);
+  Flux<GreetingResponse> bidiGreetingNotAuthorized(Flux<GreetingRequest> request);
 
   @ServiceMethod
-  Flux<GreetingResponse> bidiThrowingGreeting(Flux<GreetingRequest> request);
+  Flux<GreetingResponse> bidiGreetingIllegalArgumentException(Flux<GreetingRequest> request);
 }
