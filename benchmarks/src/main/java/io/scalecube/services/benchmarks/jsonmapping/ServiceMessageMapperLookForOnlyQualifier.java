@@ -40,6 +40,8 @@ public class ServiceMessageMapperLookForOnlyQualifier {
       while (qualifierNofFound && jsonParser.nextToken() != JsonToken.END_OBJECT) {
         String fieldName = jsonParser.getCurrentName();
         current = jsonParser.nextToken();
+        // System.out.println("fieldName = " + fieldName + ", currentToken = " + current.asString());
+
         switch (fieldName) {
           case "q":
             builder.qualifier(jsonParser.getValueAsString())

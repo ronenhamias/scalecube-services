@@ -22,8 +22,8 @@ public class ServiceMessageMapper {
 
   private final JsonFactory jsonFactory = new JsonFactory();
 
-  public ServiceMessage2 decode(ByteBuf byteBuf) {
-    try (InputStream stream = new ByteBufInputStream(byteBuf.slice())) {
+  public ServiceMessage2 decode(ByteBuf bb) {
+    try (InputStream stream = new ByteBufInputStream(bb.slice())) {
       JsonParser jsonParser = jsonFactory.createParser(stream);
 
       ServiceMessage2.Builder builder = ServiceMessage2.builder();
@@ -31,13 +31,14 @@ public class ServiceMessageMapper {
       JsonToken current = jsonParser.nextToken();
       if (current != JsonToken.START_OBJECT) {
         System.out.println("Error: root should be object: quiting.");
-        LOGGER.error("root should be object: {}", byteBuf.toString(Charset.defaultCharset()));
+        LOGGER.error("root should be object: {}", bb.toString(Charset.defaultCharset()));
         throw new BadRequestException("Failed to decode message");
       }
 
       while (jsonParser.nextToken() != JsonToken.END_OBJECT) {
         String fieldName = jsonParser.getCurrentName();
         current = jsonParser.nextToken();
+        // System.out.println("fieldName = " + fieldName + ", currentToken = " + current.asString());
         switch (fieldName) {
           case "q":
             builder.qualifier(jsonParser.getValueAsString());
@@ -50,8 +51,10 @@ public class ServiceMessageMapper {
               case START_OBJECT:
               case START_ARRAY:
                 jsonParser.skipChildren();
+                // { -- index X
+                // } -- end index Y
               case VALUE_STRING:
-                builder.dataType(ServiceMessage2.class).data(byteBuf);
+                builder.dataType(ServiceMessage2.class).data(bb.slice(x, y));
                 break;
               case VALUE_NULL:// todo ?
               default: // todo nothing (skip) or set data (left only primitives) ?
@@ -63,7 +66,7 @@ public class ServiceMessageMapper {
       }
       return builder.build();
     } catch (Throwable ex) {
-      LOGGER.error("Failed to decode message: {}, cause: {}", byteBuf.toString(Charset.defaultCharset()), ex);
+      LOGGER.error("Failed to decode message: {}, cause: {}", bb.toString(Charset.defaultCharset()), ex);
       throw new BadRequestException("Failed to decode message");
     } /*
        * finally { ReferenceCountUtil.release(byteBuf); }
