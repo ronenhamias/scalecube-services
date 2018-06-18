@@ -1,6 +1,7 @@
 package io.scalecube.services;
 
 import static io.scalecube.services.CommunicationMode.REQUEST_CHANNEL;
+import static java.util.Objects.requireNonNull;
 
 import io.scalecube.services.api.NullData;
 import io.scalecube.services.api.ServiceMessage;
@@ -16,8 +17,6 @@ import io.scalecube.services.transport.LocalServiceHandlers;
 import io.scalecube.services.transport.client.api.ClientTransport;
 import io.scalecube.transport.Address;
 
-import com.google.common.base.Optional;
-
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Optional;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Map;
@@ -119,10 +119,23 @@ public class ServiceCall {
       return serviceHandlers.requestResponse(request)
           .onErrorMap(ExceptionProcessor::mapException);
     } else { // remote service.
-      return transport.create(addressLookup(request))
-          .requestResponse(request)
-          .map(message -> dataCodec.decode(message, responseType));
+      return requestOne(request, responseType, addressLookup(request));
     }
+  }
+
+  /**
+   * Given an address issues request-and-reply request to a remote address.
+   *
+   * @param request request message to send.
+   * @param responseType type of response.
+   * @param address of remote target service to invoke.
+   * @return mono publisher completing with single response message or with error.
+   */
+  public Mono<ServiceMessage> requestOne(ServiceMessage request, Class<?> responseType, Address address) {
+    requireNonNull(address, "requestOne address paramter is required and must not be null");
+    return transport.create(address)
+        .requestResponse(request)
+        .map(message -> dataCodec.decode(message, responseType));
   }
 
   /**
@@ -148,10 +161,23 @@ public class ServiceCall {
       return serviceHandlers.requestStream(request)
           .onErrorMap(ExceptionProcessor::mapException);
     } else { // remote service.
-      return transport.create(addressLookup(request))
-          .requestStream(request)
-          .map(message -> dataCodec.decode(message, responseType));
+      return requestMany(request, responseType, addressLookup(request));
     }
+  }
+
+  /**
+   * Given an address issues request to remote service which returns stream of service messages back.
+   *
+   * @param request request with given headers.
+   * @param responseType type of responses.
+   * @param address of remote target service to invoke.
+   * @return flux publisher of service responses.
+   */
+  public Flux<ServiceMessage> requestMany(ServiceMessage request, Class<?> responseType, Address address) {
+    requireNonNull(address, "requestMany address paramter is required and must not be null");
+    return transport.create(address)
+        .requestStream(request)
+        .map(message -> dataCodec.decode(message, responseType));
   }
 
   /**
@@ -182,11 +208,26 @@ public class ServiceCall {
         return serviceHandlers.requestChannel(publisher1)
             .onErrorMap(ExceptionProcessor::mapException);
       } else { // remote service.
-        return transport.create(addressLookup(request))
-            .requestChannel(publisher1)
-            .map(message -> dataCodec.decode(message, responseType));
+        return requestBidirectional(publisher1, responseType, addressLookup(request));
       }
     });
+  }
+
+  /**
+   * Given an address issues stream of service requests to service which returns stream of service messages back.
+   *
+   * @param publisher of service requests.
+   * @param responseType type of responses.
+   * @param address of remote target service to invoke.
+   * @return flux publisher of service responses.
+   */
+  public Flux<ServiceMessage> requestBidirectional(Publisher<ServiceMessage> publisher, Class<?> responseType,
+      Address address) {
+    requireNonNull(address, "requestBidirectional address paramter is required and must not be null");
+    return transport.create(address)
+        .requestChannel(publisher)
+        .map(message -> dataCodec.decode(message, responseType));
+
   }
 
   /**
@@ -281,7 +322,7 @@ public class ServiceCall {
         return Optional.of(serviceInterface.hashCode());
 
       default:
-        return Optional.absent();
+        return Optional.empty();
     }
   }
 }
