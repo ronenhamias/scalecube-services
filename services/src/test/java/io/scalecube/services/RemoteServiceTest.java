@@ -473,15 +473,11 @@ public class RemoteServiceTest extends BaseTest {
     // get a proxy to the service api.
     GreetingService service = createProxy(consumer);
 
-    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
-
     // call the service. bidiThrowingGreeting
-    Flux<GreetingResponse> responses = service.bidiGreetingIllegalArgumentException(requests);
+    Flux<GreetingResponse> responses = service.bidiGreetingIllegalArgumentException(
+        Mono.just(new GreetingRequest("IllegalArgumentException")));
+
     // call the service.
-
-    requests.onNext(new GreetingRequest("IllegalArgumentException"));
-    requests.onComplete();
-
     StepVerifier.create(responses)
         .expectErrorMessage("IllegalArgumentException")
         .verify(Duration.ofSeconds(3));

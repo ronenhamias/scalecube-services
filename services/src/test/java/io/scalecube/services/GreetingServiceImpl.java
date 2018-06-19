@@ -65,11 +65,12 @@ public final class GreetingServiceImpl implements GreetingService {
 
   @Override
   public Flux<GreetingResponse> bidiGreeting(Publisher<GreetingRequest> request) {
-    return Flux.from(request).map(onNext -> new GreetingResponse(" hello to: " + onNext.getName(), "" + instanceId));
+    return Flux.from(request)
+        .map(onNext -> new GreetingResponse(" hello to: " + onNext.getName(), "" + instanceId));
   }
 
   @Override
-  public Flux<GreetingResponse> bidiGreetingNotAuthorized(Publisher<GreetingRequest> request) {
+  public Flux<GreetingResponse> bidiGreetingNotAuthorized(Flux<GreetingRequest> request) {
     return Flux.error(new UnauthorizedException(500, "Not authorized"));
   }
 

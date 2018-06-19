@@ -34,8 +34,10 @@ import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -323,7 +325,9 @@ public class Reflect {
     } else if (returnType.isAssignableFrom(Flux.class)) {
       Class<?>[] reqTypes = method.getParameterTypes();
       boolean hasFluxAsReqParam = reqTypes.length > 0
-          && Flux.class.isAssignableFrom(reqTypes[0]);
+          && (Flux.class.isAssignableFrom(reqTypes[0])
+              || Publisher.class.isAssignableFrom(reqTypes[0]));
+      
       return hasFluxAsReqParam ? REQUEST_CHANNEL : REQUEST_STREAM;
     } else {
       throw new IllegalArgumentException(

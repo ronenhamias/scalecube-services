@@ -55,7 +55,7 @@ public interface GreetingService {
   Flux<GreetingResponse> bidiGreeting(Publisher<GreetingRequest> request);
 
   @ServiceMethod
-  Flux<GreetingResponse> bidiGreetingNotAuthorized(Publisher<GreetingRequest> request);
+  Flux<GreetingResponse> bidiGreetingNotAuthorized(Flux<GreetingRequest> request);
 
   @ServiceMethod
   Flux<GreetingResponse> bidiGreetingIllegalArgumentException(Publisher<GreetingRequest> request);

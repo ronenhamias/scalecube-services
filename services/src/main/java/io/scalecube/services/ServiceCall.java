@@ -253,27 +253,29 @@ public class ServiceCall {
             return check.get(); // toString, hashCode was invoked.
           }
           Class<?> returnType = methodInfo.parameterizedReturnType();
+
           Metrics.mark(serviceInterface, metrics, method, "request");
+          boolean requestServiceMessage = methodInfo.isRequestTypeServiceMessage();
 
           switch (methodInfo.communicationMode()) {
             case FIRE_AND_FORGET:
-              return serviceCall.oneWay(toServiceMessage(method, params, methodInfo));
+              return serviceCall.oneWay(toServiceMessage(method, methodInfo, params));
 
             case REQUEST_RESPONSE:
-              return serviceCall.requestOne(toServiceMessage(method, params, methodInfo), returnType)
-                  .transform(asMono(methodInfo));
+              return serviceCall.requestOne(toServiceMessage(method, methodInfo, params), returnType)
+                  .transform(asMono(requestServiceMessage));
 
             case REQUEST_STREAM:
-              return serviceCall.requestMany(toServiceMessage(method, params, methodInfo), returnType)
-                  .transform(asFlux(methodInfo));
+              return serviceCall.requestMany(toServiceMessage(method, methodInfo, params), returnType)
+                  .transform(asFlux(requestServiceMessage));
 
             case REQUEST_CHANNEL:
               // if this is REQUEST_CHANNEL it means params[0] must be publisher thus its safe to cast.
-              Flux<ServiceMessage> request = Flux.from((Publisher) params[0])
-                  .map(data -> toServiceMessage(method, params, methodInfo));
+              Flux<ServiceMessage> publisher = Flux.from((Publisher) params[0])
+                  .map(data -> toServiceMessage(method, methodInfo, data));
 
-              return serviceCall.requestBidirectional(request, returnType)
-                  .transform(asFlux(methodInfo));
+              return serviceCall.requestBidirectional(publisher, returnType)
+                  .transform(asFlux(requestServiceMessage));
 
             default:
               throw new IllegalArgumentException("Communication mode is not supported: " + method);
@@ -290,20 +292,20 @@ public class ServiceCall {
   }
 
   private static Function<? super Flux<ServiceMessage>, ? extends Publisher<ServiceMessage>> asFlux(
-      MethodInfo methodInfo) {
-    return flux -> methodInfo.isRequestTypeServiceMessage()
+      boolean isRequestTypeServiceMessage) {
+    return flux -> isRequestTypeServiceMessage
         ? flux
         : flux.map(ServiceMessage::data);
   }
 
   private static Function<? super Mono<ServiceMessage>, ? extends Publisher<ServiceMessage>> asMono(
-      MethodInfo methodInfo) {
-    return mono -> methodInfo.isRequestTypeServiceMessage()
+      boolean isRequestTypeServiceMessage) {
+    return mono -> isRequestTypeServiceMessage
         ? mono
         : mono.map(ServiceMessage::data);
   }
 
-  private static ServiceMessage toServiceMessage(Method method, Object[] params, MethodInfo methodInfo) {
+  private static ServiceMessage toServiceMessage(Method method, MethodInfo methodInfo, Object... params) {
     return ServiceMessage.builder()
         .qualifier(methodInfo.serviceName(), method.getName())
         .data(method.getParameterCount() != 0 ? params[0] : NullData.NULL_DATA)
