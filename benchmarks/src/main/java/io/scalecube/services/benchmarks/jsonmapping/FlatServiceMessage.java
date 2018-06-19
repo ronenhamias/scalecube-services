@@ -33,19 +33,6 @@ public final class FlatServiceMessage {
     return Builder.getInstance();
   }
 
-  // todo
-  // /**
-  // * Instantiates new message with the same data and headers as at given message.
-  // *
-  // * @param message the message to be copied
-  // * @return a new message, with the same data and headers
-  // */
-  // public static Builder from(FlatServiceMessage message) {
-  // return FlatServiceMessage.builder()
-  // .data(message.data())
-  // .headers(message.headers());
-  // }
-
   /**
    * Instantiates empty message for deserialization purpose.
    */
