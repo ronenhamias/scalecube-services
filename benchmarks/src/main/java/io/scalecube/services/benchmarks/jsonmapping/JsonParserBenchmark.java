@@ -23,65 +23,34 @@ import java.util.concurrent.TimeUnit;
 @Fork(1)
 @Threads(Threads.MAX)
 @Warmup(iterations = 1)
-@Measurement(iterations = 2)
-// @State(Scope.Benchmark)
+@Measurement(iterations = 3, time = 10)
 public class JsonParserBenchmark {
 
-  // private static final String INPUT;
-  // private static final ByteBuf BYTE_BUF;
-  private static final ServiceMessageMapper MAPPER = new ServiceMessageMapper();
-  private static final ServiceMessageMapperLookForOnlyQualifier MAPPER_LOOK_FOR_ONLY_QUALIFIER =
-      new ServiceMessageMapperLookForOnlyQualifier();
-  private static final LegacyServiceMessageMapper LEGACY_MAPPER = new LegacyServiceMessageMapper();
-  private static final JsonFlatMessageDeserializer FAST_MAPPER = new JsonFlatMessageDeserializer();
-
-  // static {
-  // INPUT =
-  // "{" +
-  // "\"q\":\"/hello/goodbye\"," +
-  // "\"dataType\":\"pojo.class\"," +
-  // "\"data\":" + getObjectData() + "," +
-  // "\"unknown\":\"someValue\"" +
-  // "}";
-  // BYTE_BUF = Unpooled.copiedBuffer(INPUT.getBytes());
-  // }
-
-
-  // public static void main(String[] args) {
-  // ServiceMessage2 message = MAPPER_LOOK_FOR_ONLY_QUALIFIER.decode(BYTE_BUF);
-  // System.out.println(message.qualifier());
-  // System.out.println(message.dataType());
-  // System.out.println(message.headers());
-  // }
+  private static final ServiceMessageMapper JSON_STREAM_MAPPER = new ServiceMessageMapper();
+  private static final SimpleServiceMessageObjectMapper SIMPLE_OBJECT_MAPPER = new SimpleServiceMessageObjectMapper();
+  private static final SelfWrittenJsonMessageDeserializer SELF_WRITTEN_MAPPER =
+      new SelfWrittenJsonMessageDeserializer();
 
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Benchmark
   public void testJsonParser(JsonDataState state, Blackhole bh) {
-    bh.consume(MAPPER.decode(state.byteBuf));
+    bh.consume(JSON_STREAM_MAPPER.decode(state.byteBuf));
   }
 
-  //
-  // @BenchmarkMode(Mode.AverageTime)
-  // @OutputTimeUnit(TimeUnit.NANOSECONDS)
-  // @Benchmark
-  // public void testJsonParserLookForOnlyQualifier(Blackhole bh) {
-  // bh.consume(MAPPER_LOOK_FOR_ONLY_QUALIFIER.decode(BYTE_BUF));
-  // }
-  //
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.NANOSECONDS)
   @Benchmark
   public void testFastJsonParser(JsonDataState state, Blackhole bh) {
-    bh.consume(FAST_MAPPER.deserialize(state.byteBuf));
+    bh.consume(SELF_WRITTEN_MAPPER.deserialize(state.byteBuf));
   }
-  //
-  // @BenchmarkMode(Mode.AverageTime)
-  // @OutputTimeUnit(TimeUnit.NANOSECONDS)
-  // @Benchmark
-  // public void testLegacyJsonParser(Blackhole bh) {
-  // bh.consume(LEGACY_MAPPER.decode(BYTE_BUF));
-  // }
+
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Benchmark
+  public void testLegacyJsonParser(JsonDataState state, Blackhole bh) {
+    bh.consume(SIMPLE_OBJECT_MAPPER.decode(state.byteBuf));
+  }
 
   private static String getObjectData() {
     return "{\n" + "\"items\": [\n" + "{\n" + "\"index\": 1,\n" + "\"index_start_at\": 56,\n" + "\"integer\": 38,\n"
@@ -386,7 +355,7 @@ public class JsonParserBenchmark {
     private String getDataByType() {
       switch (type) {
         case "primitive":
-          return "false";
+          return "1";
         case "string":
           return getStringData();
         case "object":

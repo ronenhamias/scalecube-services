@@ -22,13 +22,13 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
-public class LegacyServiceMessageMapper {
+public class SimpleServiceMessageObjectMapper {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ServiceMessageDataCodec.class);
 
   private final ObjectMapper mapper;
 
-  public LegacyServiceMessageMapper() {
+  public SimpleServiceMessageObjectMapper() {
     ObjectMapper mapper = new ObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
@@ -41,10 +41,10 @@ public class LegacyServiceMessageMapper {
     this.mapper = mapper;
   }
 
-  public ServiceMessage2 decode(ByteBuf byteBuf) {
+  public FlatServiceMessage decode(ByteBuf byteBuf) {
     try (InputStream stream = new ByteBufInputStream(byteBuf.slice())) {
 
-      ServiceMessage2.Builder builder = ServiceMessage2.builder();
+      FlatServiceMessage.Builder builder = FlatServiceMessage.builder();
 
       Map map = mapper.readValue(stream, HashMap.class);
 
@@ -66,7 +66,7 @@ public class LegacyServiceMessageMapper {
        */
   }
 
-  // public ByteBuf encode(ServiceMessage2 message) {
+  // public ByteBuf encode(FlatServiceMessage message) {
   //
   // }
 }

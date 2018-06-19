@@ -22,11 +22,11 @@ public class ServiceMessageMapper {
 
   private final JsonFactory jsonFactory = new JsonFactory();
 
-  public ServiceMessage2 decode(ByteBuf bb) {
+  public FlatServiceMessage decode(ByteBuf bb) {
     try (InputStream stream = new ByteBufInputStream(bb.slice())) {
       JsonParser jsonParser = jsonFactory.createParser(stream);
 
-      ServiceMessage2.Builder builder = ServiceMessage2.builder();
+      FlatServiceMessage.Builder builder = FlatServiceMessage.builder();
 
       JsonToken current = jsonParser.nextToken();
       if (current != JsonToken.START_OBJECT) {
@@ -51,10 +51,8 @@ public class ServiceMessageMapper {
               case START_OBJECT:
               case START_ARRAY:
                 jsonParser.skipChildren();
-                // { -- index X
-                // } -- end index Y
               case VALUE_STRING:
-                builder.dataType(ServiceMessage2.class).data(bb.slice(x, y));
+                builder.dataType(FlatServiceMessage.class).data(bb);
                 break;
               case VALUE_NULL:// todo ?
               default: // todo nothing (skip) or set data (left only primitives) ?
@@ -73,7 +71,7 @@ public class ServiceMessageMapper {
        */
   }
 
-  // public ByteBuf encode(ServiceMessage2 message) {
+  // public ByteBuf encode(FlatServiceMessage message) {
   //
   // }
 }

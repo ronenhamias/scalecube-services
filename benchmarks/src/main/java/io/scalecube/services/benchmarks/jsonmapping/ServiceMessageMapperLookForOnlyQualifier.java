@@ -22,11 +22,11 @@ public class ServiceMessageMapperLookForOnlyQualifier {
 
   private final JsonFactory jsonFactory = new JsonFactory();
 
-  public ServiceMessage2 decode(ByteBuf byteBuf) {
+  public FlatServiceMessage decode(ByteBuf byteBuf) {
     try (InputStream stream = new ByteBufInputStream(byteBuf.slice())) {
       JsonParser jsonParser = jsonFactory.createParser(stream);
 
-      ServiceMessage2.Builder builder = ServiceMessage2.builder();
+      FlatServiceMessage.Builder builder = FlatServiceMessage.builder();
 
       JsonToken current = jsonParser.nextToken();
       if (current != JsonToken.START_OBJECT) {
@@ -45,7 +45,7 @@ public class ServiceMessageMapperLookForOnlyQualifier {
         switch (fieldName) {
           case "q":
             builder.qualifier(jsonParser.getValueAsString())
-                .dataType(ServiceMessage2.class)
+                .dataType(FlatServiceMessage.class)
                 .data(byteBuf);
             qualifierNofFound = false;
             break;
@@ -58,7 +58,7 @@ public class ServiceMessageMapperLookForOnlyQualifier {
               case START_ARRAY:
                 jsonParser.skipChildren();
               case VALUE_STRING:
-                builder.dataType(ServiceMessage2.class).data(byteBuf);
+                builder.dataType(FlatServiceMessage.class).data(byteBuf);
                 break;
               case VALUE_NULL:// todo ?
               default: // todo nothing (skip) or set data (left only primitives) ?
@@ -77,7 +77,7 @@ public class ServiceMessageMapperLookForOnlyQualifier {
        */
   }
 
-  // public ByteBuf encode(ServiceMessage2 message) {
+  // public ByteBuf encode(FlatServiceMessage message) {
   //
   // }
 }

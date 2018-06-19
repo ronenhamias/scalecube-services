@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public final class ServiceMessage2 {
+public final class FlatServiceMessage {
 
   /**
    * This header is supposed to be used by application in case if same data type can be reused for several messages so
@@ -40,8 +40,8 @@ public final class ServiceMessage2 {
   // * @param message the message to be copied
   // * @return a new message, with the same data and headers
   // */
-  // public static Builder from(ServiceMessage2 message) {
-  // return ServiceMessage2.builder()
+  // public static Builder from(FlatServiceMessage message) {
+  // return FlatServiceMessage.builder()
   // .data(message.data())
   // .headers(message.headers());
   // }
@@ -49,9 +49,9 @@ public final class ServiceMessage2 {
   /**
    * Instantiates empty message for deserialization purpose.
    */
-  ServiceMessage2() {}
+  FlatServiceMessage() {}
 
-  private ServiceMessage2(Builder builder) {
+  private FlatServiceMessage(Builder builder) {
     this.q = builder.q;
     this.dataType = builder.dataType;
     this.headers = builder.headers;
@@ -175,8 +175,8 @@ public final class ServiceMessage2 {
       return this;
     }
 
-    public ServiceMessage2 build() {
-      return new ServiceMessage2(this);
+    public FlatServiceMessage build() {
+      return new FlatServiceMessage(this);
     }
   }
 }

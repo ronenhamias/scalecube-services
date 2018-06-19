@@ -13,7 +13,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
-final class OpenAPIJsonParser {
+final class SelfWrittenJsonParser {
 
   static final byte ASCII_COLON = 58; // :
   static final byte ASCII_DOUBLE_QUOTES = 34; // "
