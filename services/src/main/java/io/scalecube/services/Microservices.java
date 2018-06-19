@@ -116,7 +116,6 @@ public class Microservices {
   private final LocalServiceHandlers serviceHandlers;
   private final List<Object> services;
   private final ClusterConfig.Builder clusterConfig;
-  private final Router router;
 
   private Cluster cluster; // calculated field
 
@@ -149,7 +148,6 @@ public class Microservices {
     discovery = new ServiceDiscovery(serviceRegistry);
 
     clusterConfig = builder.clusterConfig;
-    router = builder.router;
   }
 
   private Mono<Microservices> start() {
@@ -178,7 +176,6 @@ public class Microservices {
     private Metrics metrics;
     private ServerTransport server = ServiceTransport.getTransport().getServerTransport();
     private ClientTransport client = ServiceTransport.getTransport().getClientTransport();
-    private Router router = Routers.getRouter(RoundRobinServiceRouter.class);
 
     /**
      * Microservices instance builder.
@@ -250,16 +247,6 @@ public class Microservices {
       return new ServiceBuilder(serviceInstance, this);
     }
 
-    public Builder router(Router router) {
-      this.router = router;
-      return this;
-    }
-
-    public Builder router(Class<? extends Router> routerType) {
-      this.router = Routers.getRouter(routerType);
-      return this;
-    }
-
   }
 
   private Microservices init(Cluster cluster) {
@@ -281,7 +268,7 @@ public class Microservices {
   }
 
   public Call call() {
-    return new Call(client, serviceHandlers, serviceRegistry).metrics(metrics).router(router);
+    return new Call(client, serviceHandlers, serviceRegistry).metrics(metrics);
   }
 
   public Mono<Void> shutdown() {
