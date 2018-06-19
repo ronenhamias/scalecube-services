@@ -264,8 +264,6 @@ public class RemoteServiceTest extends BaseTest {
     consumer.shutdown().block();
   }
 
-
-
   @Test
   public void test_remote_greeting_request_timeout_expires() {
     // Create microservices cluster.
