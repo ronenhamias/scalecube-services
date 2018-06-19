@@ -25,6 +25,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;
+import java.util.function.Function;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Map;
@@ -251,39 +252,31 @@ public class ServiceCall {
           if (check.isPresent()) {
             return check.get(); // toString, hashCode was invoked.
           }
+          Class<?> returnType = methodInfo.parameterizedReturnType();
           Metrics.mark(serviceInterface, metrics, method, "request");
-          if (!methodInfo.communicationMode().equals(REQUEST_CHANNEL)) {
-            ServiceMessage request = ServiceMessage.builder()
-                .qualifier(methodInfo.serviceName(), method.getName())
-                .data(method.getParameterCount() != 0 ? params[0] : NullData.NULL_DATA)
-                .build();
 
-            switch (methodInfo.communicationMode()) {
-              case FIRE_AND_FORGET:
-                return serviceCall.oneWay(request);
-              case REQUEST_RESPONSE:
-                return serviceCall.requestOne(request, methodInfo.parameterizedReturnType())
-                    .transform(
-                        mono -> methodInfo.isRequestTypeServiceMessage() ? mono : mono.map(ServiceMessage::data));
-              case REQUEST_STREAM:
-                return serviceCall.requestMany(request, methodInfo.parameterizedReturnType())
-                    .transform(
-                        flux -> methodInfo.isRequestTypeServiceMessage() ? flux : flux.map(ServiceMessage::data));
-              default:
-                throw new IllegalArgumentException("Communication mode is not supported: " + method);
-            }
-          } else if (methodInfo.communicationMode().equals(REQUEST_CHANNEL)) {
-            // if this is REQUEST_CHANNEL it means params[0] must be publisher thus its safe to cast.
-            Flux<ServiceMessage> request = Flux.from((Publisher) params[0])
-                .map(data -> ServiceMessage.builder()
-                    .qualifier(methodInfo.serviceName(), method.getName())
-                    .data(method.getParameterCount() != 0 ? data : NullData.NULL_DATA)
-                    .build());
+          switch (methodInfo.communicationMode()) {
+            case FIRE_AND_FORGET:
+              return serviceCall.oneWay(toServiceMessage(method, params, methodInfo));
 
-            return serviceCall.requestBidirectional(request, methodInfo.parameterizedReturnType())
-                .transform(flux -> methodInfo.isRequestTypeServiceMessage() ? flux : flux.map(ServiceMessage::data));
-          } else {
-            throw new IllegalArgumentException("Communication mode is not supported: " + method);
+            case REQUEST_RESPONSE:
+              return serviceCall.requestOne(toServiceMessage(method, params, methodInfo), returnType)
+                  .transform(asMono(methodInfo));
+
+            case REQUEST_STREAM:
+              return serviceCall.requestMany(toServiceMessage(method, params, methodInfo), returnType)
+                  .transform(asFlux(methodInfo));
+
+            case REQUEST_CHANNEL:
+              // if this is REQUEST_CHANNEL it means params[0] must be publisher thus its safe to cast.
+              Flux<ServiceMessage> request = Flux.from((Publisher) params[0])
+                  .map(data -> toServiceMessage(method, params, methodInfo));
+
+              return serviceCall.requestBidirectional(request, returnType)
+                  .transform(asFlux(methodInfo));
+
+            default:
+              throw new IllegalArgumentException("Communication mode is not supported: " + method);
           }
         });
   }
@@ -294,6 +287,27 @@ public class ServiceCall {
             .orElseThrow(() -> noReachableMemberException(request));
 
     return Address.create(serviceReference.host(), serviceReference.port());
+  }
+
+  private static Function<? super Flux<ServiceMessage>, ? extends Publisher<ServiceMessage>> asFlux(
+      MethodInfo methodInfo) {
+    return flux -> methodInfo.isRequestTypeServiceMessage()
+        ? flux
+        : flux.map(ServiceMessage::data);
+  }
+
+  private static Function<? super Mono<ServiceMessage>, ? extends Publisher<ServiceMessage>> asMono(
+      MethodInfo methodInfo) {
+    return mono -> methodInfo.isRequestTypeServiceMessage()
+        ? mono
+        : mono.map(ServiceMessage::data);
+  }
+
+  private static ServiceMessage toServiceMessage(Method method, Object[] params, MethodInfo methodInfo) {
+    return ServiceMessage.builder()
+        .qualifier(methodInfo.serviceName(), method.getName())
+        .data(method.getParameterCount() != 0 ? params[0] : NullData.NULL_DATA)
+        .build();
   }
 
   private static ServiceUnavailableException noReachableMemberException(ServiceMessage request) {
