@@ -87,7 +87,7 @@ public class ServiceCall {
   }
 
   /**
-   * Issues fire-and-rorget request.
+   * Issues fire-and-forget request.
    *
    * @param request request message to send.
    * @return mono publisher completing normally or with error.
@@ -97,7 +97,7 @@ public class ServiceCall {
   }
 
   /**
-   * Issues fire-and-rorget request.
+   * Issues fire-and-forget request.
    *
    * @param request request message to send.
    * @param address of remote target service to invoke.
@@ -280,7 +280,7 @@ public class ServiceCall {
                   .transform(asFlux(isServiceMessage));
 
             case REQUEST_CHANNEL:
-              // if this is REQUEST_CHANNEL it means params[0] must be publisher thus its safe to cast.
+              // this is REQUEST_CHANNEL so it means params[0] must be a publisher - its safe to cast.
               return serviceCall.requestBidirectional(Flux.from((Publisher) params[0])
                   .map(data -> toServiceMessage(methodInfo, data)), returnType)
                   .transform(asFlux(isServiceMessage));
@@ -299,6 +299,13 @@ public class ServiceCall {
     return Address.create(serviceReference.host(), serviceReference.port());
   }
 
+  private static ServiceMessage toServiceMessage(MethodInfo methodInfo, Object... params) {
+    return ServiceMessage.builder()
+        .qualifier(methodInfo.serviceName(), methodInfo.methodName())
+        .data(methodInfo.parameterCount() != 0 ? params[0] : NullData.NULL_DATA)
+        .build();
+  }
+  
   private static Function<? super Flux<ServiceMessage>, ? extends Publisher<ServiceMessage>> asFlux(
       boolean isRequestTypeServiceMessage) {
     return flux -> isRequestTypeServiceMessage
@@ -311,13 +318,6 @@ public class ServiceCall {
     return mono -> isRequestTypeServiceMessage
         ? mono
         : mono.map(ServiceMessage::data);
-  }
-
-  private static ServiceMessage toServiceMessage(MethodInfo methodInfo, Object... params) {
-    return ServiceMessage.builder()
-        .qualifier(methodInfo.serviceName(), methodInfo.methodName())
-        .data(methodInfo.parameterCount() != 0 ? params[0] : NullData.NULL_DATA)
-        .build();
   }
 
   private static ServiceUnavailableException noReachableMemberException(ServiceMessage request) {
