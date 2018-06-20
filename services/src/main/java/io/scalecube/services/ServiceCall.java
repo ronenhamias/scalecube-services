@@ -97,6 +97,17 @@ public class ServiceCall {
   }
 
   /**
+   * Issues fire-and-rorget request.
+   *
+   * @param request request message to send.
+   * @param address of remote target service to invoke.
+   * @return mono publisher completing normally or with error.
+   */
+  public Mono<Void> oneWay(ServiceMessage request, Address address) {
+    return requestOne(request, Void.class, address).then();
+  }
+
+  /**
    * Issues request-and-reply request.
    *
    * @param request request message to send.
