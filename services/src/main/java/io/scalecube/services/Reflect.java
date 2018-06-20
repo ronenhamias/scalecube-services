@@ -225,8 +225,13 @@ public class Reflect {
   public static Map<Method, MethodInfo> methodsInfo(Class<?> serviceInterface) {
     return Collections.unmodifiableMap(Reflect.serviceMethods(serviceInterface).values().stream()
         .collect(Collectors.toMap(method -> method,
-            method1 -> new MethodInfo(serviceName(serviceInterface), parameterizedReturnType(method1),
-                communicationMode(method1), isRequestTypeServiceMessage(method1)))));
+            method1 -> new MethodInfo(
+                serviceName(serviceInterface), 
+                parameterizedReturnType(method1),
+                communicationMode(method1), 
+                isRequestTypeServiceMessage(method1),
+                methodName(method1), 
+                method1.getParameterCount()))));
   }
 
   /**

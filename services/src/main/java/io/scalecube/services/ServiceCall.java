@@ -257,32 +257,32 @@ public class ServiceCall {
     return (T) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] {serviceInterface},
         (proxy, method, params) -> {
           MethodInfo methodInfo = genericReturnTypes.get(method);
+          Class<?> returnType = methodInfo.parameterizedReturnType();
+          boolean requestServiceMessage = methodInfo.isRequestTypeServiceMessage();
 
           Optional<Object> check = toStringOrEqualsOrHashCode(method.getName(), serviceInterface, params);
           if (check.isPresent()) {
             return check.get(); // toString, hashCode was invoked.
           }
-          Class<?> returnType = methodInfo.parameterizedReturnType();
 
           Metrics.mark(serviceInterface, metrics, method, "request");
-          boolean requestServiceMessage = methodInfo.isRequestTypeServiceMessage();
 
           switch (methodInfo.communicationMode()) {
             case FIRE_AND_FORGET:
-              return serviceCall.oneWay(toServiceMessage(method, methodInfo, params));
+              return serviceCall.oneWay(toServiceMessage(methodInfo, params));
 
             case REQUEST_RESPONSE:
-              return serviceCall.requestOne(toServiceMessage(method, methodInfo, params), returnType)
+              return serviceCall.requestOne(toServiceMessage(methodInfo, params), returnType)
                   .transform(asMono(requestServiceMessage));
 
             case REQUEST_STREAM:
-              return serviceCall.requestMany(toServiceMessage(method, methodInfo, params), returnType)
+              return serviceCall.requestMany(toServiceMessage(methodInfo, params), returnType)
                   .transform(asFlux(requestServiceMessage));
 
             case REQUEST_CHANNEL:
               // if this is REQUEST_CHANNEL it means params[0] must be publisher thus its safe to cast.
               Flux<ServiceMessage> publisher = Flux.from((Publisher) params[0])
-                  .map(data -> toServiceMessage(method, methodInfo, data));
+                  .map(data -> toServiceMessage(methodInfo, data));
 
               return serviceCall.requestBidirectional(publisher, returnType)
                   .transform(asFlux(requestServiceMessage));
@@ -315,10 +315,10 @@ public class ServiceCall {
         : mono.map(ServiceMessage::data);
   }
 
-  private static ServiceMessage toServiceMessage(Method method, MethodInfo methodInfo, Object... params) {
+  private static ServiceMessage toServiceMessage(MethodInfo methodInfo, Object... params) {
     return ServiceMessage.builder()
-        .qualifier(methodInfo.serviceName(), method.getName())
-        .data(method.getParameterCount() != 0 ? params[0] : NullData.NULL_DATA)
+        .qualifier(methodInfo.serviceName(), methodInfo.methodName())
+        .data(methodInfo.parameterCount() != 0 ? params[0] : NullData.NULL_DATA)
         .build();
   }
 
