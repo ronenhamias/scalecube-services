@@ -16,12 +16,12 @@ import reactor.core.scheduler.Schedulers;
 
 public class GenericBenchmarksState {
 
-  protected final GenericBenchmarksSettings settings;
+  private final GenericBenchmarksSettings settings;
 
-  protected MetricRegistry registry;
-  protected ConsoleReporter consoleReporter;
-  protected Scheduler scheduler;
-  protected CsvReporter csvReporter;
+  private MetricRegistry registry;
+  private ConsoleReporter consoleReporter;
+  private Scheduler scheduler;
+  private CsvReporter csvReporter;
 
 
   public GenericBenchmarksState(GenericBenchmarksSettings settings) {
@@ -33,6 +33,8 @@ public class GenericBenchmarksState {
   protected void afterAll() {}
 
   public final void setup() {
+    System.err.println("Benchmarks settings: " + settings);
+
     registry = new MetricRegistry();
 
     consoleReporter = ConsoleReporter.forRegistry(registry)

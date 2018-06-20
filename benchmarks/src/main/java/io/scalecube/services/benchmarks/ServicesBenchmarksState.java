@@ -17,17 +17,16 @@ public class ServicesBenchmarksState extends GenericBenchmarksState {
   @Override
   public void beforeAll() {
     seed = Microservices.builder()
-        .metrics(registry)
+        .metrics(registry())
         .startAwait();
 
     node = Microservices.builder()
-        .metrics(registry)
+        .metrics(registry())
         .seeds(seed.cluster().address())
         .services(services)
         .startAwait();
 
-    System.err.println("Benchmarks settings: " + settings +
-        ", seed address: " + seed.cluster().address() +
+    System.err.println("seed address: " + seed.cluster().address() +
         ", services address: " + node.serviceAddress() +
         ", seed serviceRegistry: " + seed.serviceRegistry().listServiceReferences());
   }
