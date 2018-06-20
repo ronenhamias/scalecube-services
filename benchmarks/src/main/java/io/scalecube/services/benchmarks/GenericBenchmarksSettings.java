@@ -17,11 +17,11 @@ public class GenericBenchmarksSettings {
   private static final Duration EXECUTION_TASK_TIME = Duration.ofSeconds(60);
   private static final Duration REPORTER_PERIOD = Duration.ofSeconds(10);
 
-  protected final int nThreads;
-  protected final Duration executionTaskTime;
-  protected final Duration reporterPeriod;
-  protected final File csvReporterDirectory;
-  protected final String taskName;
+  private final int nThreads;
+  private final Duration executionTaskTime;
+  private final Duration reporterPeriod;
+  private final File csvReporterDirectory;
+  private final String taskName;
 
   protected GenericBenchmarksSettings(GenericBuilder builder) {
     this.nThreads = builder.nThreads;

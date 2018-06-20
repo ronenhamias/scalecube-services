@@ -14,9 +14,9 @@ import java.util.concurrent.TimeUnit;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
-public abstract class GenericBenchmarksState {
+public class GenericBenchmarksState {
 
-  protected final ServicesBenchmarksSettings settings;
+  protected final GenericBenchmarksSettings settings;
 
   protected MetricRegistry registry;
   protected ConsoleReporter consoleReporter;
@@ -24,7 +24,7 @@ public abstract class GenericBenchmarksState {
   protected CsvReporter csvReporter;
 
 
-  public GenericBenchmarksState(ServicesBenchmarksSettings settings) {
+  public GenericBenchmarksState(GenericBenchmarksSettings settings) {
     this.settings = settings;
   }
 
