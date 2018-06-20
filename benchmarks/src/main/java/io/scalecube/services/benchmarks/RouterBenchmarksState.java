@@ -19,7 +19,7 @@ public class RouterBenchmarksState extends GenericBenchmarksState {
   private final ServiceRegistryImpl serviceRegistry = new ServiceRegistryImpl();
   private final Router router = new RoundRobinServiceRouter();
 
-  public RouterBenchmarksState(RouterBenchmarksSettings settings) {
+  public RouterBenchmarksState(BenchmarksSettings settings) {
     super(settings);
     List<Microservices.ServiceInfo> services =
         Collections.singletonList(new Microservices.ServiceInfo(new RouterBenchmarks.RouterBenchmarksServiceImpl()));

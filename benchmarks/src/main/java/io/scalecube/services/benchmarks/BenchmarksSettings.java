@@ -11,11 +11,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
-public class GenericBenchmarksSettings {
+public class BenchmarksSettings {
 
   private static final int N_THREADS = Runtime.getRuntime().availableProcessors();
   private static final Duration EXECUTION_TASK_TIME = Duration.ofSeconds(60);
   private static final Duration REPORTER_PERIOD = Duration.ofSeconds(10);
+  private static final int RESPONSE_COUNT = 1000;
+  private static final int IDENTICAL_REFERENCE_COUNT = 10;
 
   private final int nThreads;
   private final Duration executionTaskTime;
@@ -23,7 +25,14 @@ public class GenericBenchmarksSettings {
   private final File csvReporterDirectory;
   private final String taskName;
 
-  protected GenericBenchmarksSettings(GenericBuilder builder) {
+  private final int responseCount;
+  private final int identicalReferenceCount;
+
+  public static GenericBuilder from(String[] args) {
+    return new GenericBuilder().from(args);
+  }
+
+  private BenchmarksSettings(GenericBuilder builder) {
     this.nThreads = builder.nThreads;
     this.executionTaskTime = builder.executionTaskTime;
     this.reporterPeriod = builder.reporterPeriod;
@@ -36,6 +45,9 @@ public class GenericBenchmarksSettings {
     this.csvReporterDirectory = Paths.get("benchmarks", "results", taskName, time).toFile();
     // noinspection ResultOfMethodCallIgnored
     this.csvReporterDirectory.mkdirs();
+
+    this.responseCount = builder.responseCount;
+    this.identicalReferenceCount = builder.identicalReferenceCount;
   }
 
   public int nThreads() {
@@ -58,9 +70,18 @@ public class GenericBenchmarksSettings {
     return taskName;
   }
 
+
+  public int responseCount() {
+    return responseCount;
+  }
+
+  public int identicalReferenceCount() {
+    return identicalReferenceCount;
+  }
+
   @Override
   public String toString() {
-    return "GenericBenchmarksSettings{" +
+    return "BenchmarksSettings{" +
         "nThreads=" + nThreads +
         ", executionTaskTime=" + executionTaskTime +
         ", reporterPeriod=" + reporterPeriod +
@@ -69,14 +90,17 @@ public class GenericBenchmarksSettings {
         '}';
   }
 
-  public static abstract class GenericBuilder<TYPE, SELF extends GenericBuilder<TYPE, SELF>> {
+  public static class GenericBuilder {
     private final Map<String, Consumer<String>> argsConsumers;
 
     private Integer nThreads = N_THREADS;
     private Duration executionTaskTime = EXECUTION_TASK_TIME;
     private Duration reporterPeriod = REPORTER_PERIOD;
 
-    public SELF from(String[] args) {
+    private Integer responseCount = RESPONSE_COUNT;
+    private Integer identicalReferenceCount = IDENTICAL_REFERENCE_COUNT;
+
+    public GenericBuilder from(String[] args) {
       if (args != null) {
         for (String pair : args) {
           String[] keyValue = pair.split("=", 2);
@@ -90,42 +114,48 @@ public class GenericBenchmarksSettings {
           }
         }
       }
-      return self();
+      return this;
     }
 
-    protected GenericBuilder() {
+    private GenericBuilder() {
       this.argsConsumers = new HashMap<>();
       this.argsConsumers.put("nThreads", value -> nThreads(Integer.parseInt(value)));
       this.argsConsumers.put("executionTaskTimeInSec",
           value -> executionTaskTime(Duration.ofSeconds(Long.parseLong(value))));
       this.argsConsumers.put("reporterPeriodInSec", value -> reporterPeriod(Duration.ofSeconds(Long.parseLong(value))));
+
+      this.argsConsumers.put("responseCount", value -> responseCount(Integer.parseInt(value)));
+      this.argsConsumers.put("identicalReferenceCount", value -> identicalRefCount(Integer.parseInt(value)));
     }
 
-    protected void addArgsConsumer(String key, Consumer<String> consumer) {
-      this.argsConsumers.put(key, consumer);
-    }
-
-    public SELF nThreads(Integer nThreads) {
+    public GenericBuilder nThreads(Integer nThreads) {
       this.nThreads = nThreads;
-      return self();
+      return this;
     }
 
-    public SELF executionTaskTime(Duration executionTaskTime) {
+    public GenericBuilder executionTaskTime(Duration executionTaskTime) {
       this.executionTaskTime = executionTaskTime;
-      return self();
+      return this;
     }
 
-    public SELF reporterPeriod(Duration reporterPeriod) {
+    public GenericBuilder reporterPeriod(Duration reporterPeriod) {
       this.reporterPeriod = reporterPeriod;
-      return self();
+      return this;
     }
 
-    public SELF self() {
-      // noinspection unchecked
-      return (SELF) this;
+    public GenericBuilder responseCount(Integer responseCount) {
+      this.responseCount = responseCount;
+      return this;
     }
 
-    public abstract TYPE build();
+    public GenericBuilder identicalRefCount(Integer identicalReferenceCount) {
+      this.identicalReferenceCount = identicalReferenceCount;
+      return this;
+    }
+
+    public BenchmarksSettings build() {
+      return new BenchmarksSettings(this);
+    }
 
     private void parse(String[] args, Map<String, Consumer<String>> consumers) {
       if (args != null) {

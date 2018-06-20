@@ -16,7 +16,7 @@ import reactor.core.scheduler.Schedulers;
 
 public class GenericBenchmarksState {
 
-  private final GenericBenchmarksSettings settings;
+  private final BenchmarksSettings settings;
 
   private MetricRegistry registry;
   private ConsoleReporter consoleReporter;
@@ -24,7 +24,7 @@ public class GenericBenchmarksState {
   private CsvReporter csvReporter;
 
 
-  public GenericBenchmarksState(GenericBenchmarksSettings settings) {
+  public GenericBenchmarksState(BenchmarksSettings settings) {
     this.settings = settings;
   }
 

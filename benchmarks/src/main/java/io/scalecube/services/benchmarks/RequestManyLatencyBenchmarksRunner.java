@@ -11,8 +11,7 @@ import reactor.core.publisher.Flux;
 public class RequestManyLatencyBenchmarksRunner {
 
   public static void main(String[] args) {
-    ServicesBenchmarksSettings settings = ServicesBenchmarksSettings.from(args)
-        .build();
+    BenchmarksSettings settings = BenchmarksSettings.from(args).build();
 
     ServicesBenchmarksState state = new ServicesBenchmarksState(settings, new BenchmarkServiceImpl());
     state.setup();

@@ -20,7 +20,7 @@ public class RouterBenchmarks {
       .build();
 
   public static void main(String[] args) {
-    RouterBenchmarksSettings settings = RouterBenchmarksSettings.from(args).build();
+    BenchmarksSettings settings = BenchmarksSettings.from(args).build();
     RouterBenchmarksState state = new RouterBenchmarksState(settings);
     state.setup();
 

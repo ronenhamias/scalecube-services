@@ -9,7 +9,7 @@ public class ServicesBenchmarksState extends GenericBenchmarksState {
   private Microservices seed;
   private Microservices node;
 
-  public ServicesBenchmarksState(ServicesBenchmarksSettings settings, Object... services) {
+  public ServicesBenchmarksState(BenchmarksSettings settings, Object... services) {
     super(settings);
     this.services = services;
   }
