@@ -16,8 +16,8 @@ public final class ServiceMessage {
 
 
   /**
-   * This header stands for "Stream Id" and has to be used for Stream multiplexing.
-   * Messages within one logical stream have to be signed with equal sid-s.
+   * This header stands for "Stream Id" and has to be used for Stream multiplexing. Messages within one logical stream
+   * have to be signed with equal sid-s.
    */
   static final String HEADER_STREAM_ID = "sid";
 
@@ -27,7 +27,13 @@ public final class ServiceMessage {
    */
   static final String HEADER_DATA_TYPE = "_type";
   static final String HEADER_DATA_FORMAT = "_data_format";
+  static final String HEADER_INACTIVITY = "_inactivity";
 
+  private String q;
+  private String sid;
+  private String type;
+  private String dataFormat;
+  private String inactivity;
   private Map<String, String> headers = Collections.emptyMap();
   private Object data = NullData.NULL_DATA;
 
@@ -37,8 +43,13 @@ public final class ServiceMessage {
   ServiceMessage() {}
 
   private ServiceMessage(Builder builder) {
-    this.data = builder.data();
-    this.headers = builder.headers();
+    this.q = builder.q;
+    this.sid = builder.sid;
+    this.type = builder.type;
+    this.dataFormat = builder.dataFormat;
+    this.inactivity = builder.inactivity;
+    this.headers = builder.headers;
+    this.data = builder.data;
   }
 
   /**
@@ -49,8 +60,13 @@ public final class ServiceMessage {
    */
   public static Builder from(ServiceMessage message) {
     return ServiceMessage.builder()
-        .data(message.data())
-        .headers(message.headers());
+        .qualifier(message.q)
+        .streamId(message.sid)
+        .dataType(message.type)
+        .dataFormat(message.dataFormat)
+        .inactivity(message.inactivity)
+        .headers(message.headers)
+        .data(message.data);
   }
 
   /**
@@ -105,7 +121,7 @@ public final class ServiceMessage {
    * @return qualifier string
    */
   public String qualifier() {
-    return header(HEADER_QUALIFIER);
+    return q;
   }
 
   /**
@@ -114,7 +130,16 @@ public final class ServiceMessage {
    * @return streamId.
    */
   public String streamId() {
-    return header(HEADER_STREAM_ID);
+    return sid;
+  }
+
+  /**
+   * Returns secound inactivity optional timeout to cancel this request if not provided then infinite
+   * 
+   * @return secound inactivity
+   */
+  public String inactivity() {
+    return inactivity;
   }
 
   /**
@@ -123,7 +148,18 @@ public final class ServiceMessage {
    * @return data format of the data
    */
   public String dataFormat() {
-    return header(HEADER_DATA_FORMAT);
+    return dataFormat;
+  }
+
+  /**
+   * Returns data type of the message data. This is a system property which used by transport for serialization and
+   * deserialization purpose. It is not supposed to be used by application directly and it is subject to changes in
+   * future releases.
+   *
+   * @return data type of the data
+   */
+  public String dataType() {
+    return type;
   }
 
   /**
@@ -152,11 +188,25 @@ public final class ServiceMessage {
 
   @Override
   public String toString() {
-    return "ServiceMessage {headers: " + headers + ", data: " + data + '}';
+    return new StringBuilder("ServiceMessage{")
+        .append("qualifier='").append(q).append('\'')
+        .append(", streamId='").append(sid).append('\'')
+        .append(", dataType='").append(type).append('\'')
+        .append(", dataFormat='").append(dataFormat).append('\'')
+        .append(", inactivity='").append(inactivity).append('\'')
+        .append(", headers=").append(headers)
+        .append(", data=").append(data)
+        .append('}')
+        .toString();
   }
 
   public static class Builder {
 
+    private String q;
+    private String sid;
+    private String type;
+    private String dataFormat;
+    private String inactivity;
     private Map<String, String> headers = new HashMap<>();
     private Object data = NullData.NULL_DATA;
 
@@ -166,27 +216,23 @@ public final class ServiceMessage {
       return new Builder();
     }
 
-    private Object data() {
-      return this.data;
-    }
-
     public Builder data(Object data) {
       this.data = Objects.requireNonNull(data);
       return this;
     }
 
-    public Builder dataType(Class<?> data) {
-      headers.put(HEADER_DATA_TYPE, data.getName());
+    public Builder dataType(String dataType) {
+      this.type = dataType;
       return this;
+    }
+
+    public Builder dataType(Class<?> dataType) {
+      return dataType(dataType.getName());
     }
 
     public Builder dataFormat(String dataFormat) {
-      headers.put(HEADER_DATA_FORMAT, dataFormat);
+      this.dataFormat = dataFormat;
       return this;
-    }
-
-    private Map<String, String> headers() {
-      return this.headers;
     }
 
     public Builder headers(Map<String, String> headers) {
@@ -199,20 +245,27 @@ public final class ServiceMessage {
       return this;
     }
 
+    public Builder qualifier(String serviceName, String methodName) {
+      return qualifier(Qualifier.asString(serviceName, methodName));
+    }
+
     public Builder qualifier(String qualifier) {
-      return header(HEADER_QUALIFIER, qualifier);
+      this.q = qualifier;
+      return this;
     }
 
     public Builder streamId(String streamId) {
-      return header(HEADER_STREAM_ID, streamId);
+      this.sid = streamId;
+      return this;
+    }
+
+    public Builder inactivity(String inactivity) {
+      this.inactivity = inactivity;
+      return this;
     }
 
     public ServiceMessage build() {
       return new ServiceMessage(this);
-    }
-
-    public Builder qualifier(String serviceName, String methodName) {
-      return qualifier(Qualifier.asString(serviceName, methodName));
     }
   }
 }
