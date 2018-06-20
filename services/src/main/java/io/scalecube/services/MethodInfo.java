@@ -7,7 +7,7 @@ public class MethodInfo {
   private final CommunicationMode communicationMode;
   private final boolean isRequestTypeServiceMessage;
   private final String name;
-  private int parameterCount;
+  private final int parameterCount;
 
   public MethodInfo(String serviceName,
       Class<?> parameterizedReturnType,
