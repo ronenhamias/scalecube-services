@@ -1,4 +1,4 @@
-package io.scalecube.services.benchmarks;
+package io.scalecube.services.benchmarks.jmh;
 
 import io.scalecube.services.Microservices;
 import io.scalecube.services.ServiceEndpoint;

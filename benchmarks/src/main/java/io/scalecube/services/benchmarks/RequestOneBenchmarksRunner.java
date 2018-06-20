@@ -1,5 +1,6 @@
 package io.scalecube.services.benchmarks;
 
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
 
 import java.util.stream.LongStream;
@@ -15,12 +16,16 @@ public class RequestOneBenchmarksRunner {
 
     BenchmarkService benchmarkService = state.service(BenchmarkService.class);
     Timer timer = state.timer();
+    Meter throutput = state.throutput();
 
     Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
         .publishOn(state.scheduler())
         .map(i -> {
           Timer.Context timeContext = timer.time();
-          return benchmarkService.requestOne("hello").doOnNext(next -> timeContext.stop());
+          return benchmarkService.requestOne("hello").doOnNext(next -> {
+            timeContext.stop();
+            throutput.mark();
+          });
         }))
         .take(settings.executionTaskTime())
         .blockLast();

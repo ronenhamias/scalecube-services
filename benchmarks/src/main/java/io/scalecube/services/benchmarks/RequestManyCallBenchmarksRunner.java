@@ -3,6 +3,7 @@ package io.scalecube.services.benchmarks;
 import io.scalecube.services.ServiceCall;
 import io.scalecube.services.api.ServiceMessage;
 
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
 
 import java.util.stream.LongStream;
@@ -19,6 +20,7 @@ public class RequestManyCallBenchmarksRunner {
     ServiceCall serviceCall = state.seed().call().create();
     int responseCount = settings.responseCount();
     Timer timer = state.timer();
+    Meter throutput = state.throutput();
 
     ServiceMessage message = ServiceMessage.builder()
         .qualifier(BenchmarkService.class.getName(), "requestMany")
@@ -29,7 +31,10 @@ public class RequestManyCallBenchmarksRunner {
         .publishOn(state.scheduler())
         .map(i -> {
           Timer.Context timeContext = timer.time();
-          return serviceCall.requestMany(message).doOnNext(next -> timeContext.stop());
+          return serviceCall.requestMany(message).doOnNext(next -> {
+            timeContext.stop();
+            throutput.mark();
+          });
         }))
         .take(settings.executionTaskTime())
         .blockLast();

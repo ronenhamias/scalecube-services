@@ -5,6 +5,7 @@ import static io.scalecube.services.benchmarks.BenchmarkService.REQUEST_BIDIRECT
 import io.scalecube.services.ServiceCall;
 import io.scalecube.services.api.ServiceMessage;
 
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
 
 import java.util.stream.LongStream;
@@ -21,6 +22,7 @@ public class RequestBidirectionalEchoCallBenchmarksRunner {
     ServiceCall serviceCall = state.seed().call().create();
     int responseCount = settings.responseCount();
     Timer timer = state.timer();
+    Meter throutput = state.throutput();
 
     Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
         .publishOn(state.scheduler())
@@ -28,7 +30,10 @@ public class RequestBidirectionalEchoCallBenchmarksRunner {
           Timer.Context timeContext = timer.time();
           Flux<ServiceMessage> request = Flux.fromStream(LongStream.range(0, responseCount).boxed())
               .map(j -> REQUEST_BIDIRECTIONAL_ECHO);
-          return serviceCall.requestBidirectional(request).doOnNext(next -> timeContext.stop());
+          return serviceCall.requestBidirectional(request).doOnNext(next -> {
+            timeContext.stop();
+            throutput.mark();
+          });
         }))
         .take(settings.executionTaskTime())
         .blockLast();

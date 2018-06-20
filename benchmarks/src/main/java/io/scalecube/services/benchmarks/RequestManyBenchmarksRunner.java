@@ -3,9 +3,9 @@ package io.scalecube.services.benchmarks;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
 
-import reactor.core.publisher.Flux;
-
 import java.util.stream.LongStream;
+
+import reactor.core.publisher.Flux;
 
 public class RequestManyBenchmarksRunner {
 
@@ -20,6 +20,8 @@ public class RequestManyBenchmarksRunner {
     int responseCount = settings.responseCount();
     Timer timer = state.timer();
     Meter meter = state.meter("responses");
+    Meter throutput = state.throutput();
+
     Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
         .parallel()
         .runOn(state.scheduler())
@@ -27,7 +29,10 @@ public class RequestManyBenchmarksRunner {
           Timer.Context timeContext = timer.time();
           return benchmarkService.requestMany(responseCount)
               .doOnNext(onNext -> meter.mark())
-              .doFinally(next -> timeContext.stop());
+              .doFinally(next -> {
+                timeContext.stop();
+                throutput.mark();
+              });
         }))
         .take(settings.executionTaskTime())
         .blockLast();
