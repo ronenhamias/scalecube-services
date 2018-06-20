@@ -188,7 +188,7 @@ public final class ServiceMessage {
 
   @Override
   public String toString() {
-    return new StringBuilder("FlatServiceMessage{")
+    return new StringBuilder("ServiceMessage{")
         .append("qualifier='").append(q).append('\'')
         .append(", streamId='").append(sid).append('\'')
         .append(", dataType='").append(type).append('\'')

@@ -14,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 
@@ -22,6 +24,12 @@ public final class ServiceMessageCodec {
   private static final Logger LOGGER = LoggerFactory.getLogger(ServiceMessageCodec.class);
 
   private static final String DEFAULT_DATA_FORMAT = "application/json";
+
+  private static final String HEADER_QUALIFIER = "q";
+  private static final String HEADER_STREAM_ID = "sid";
+  private static final String HEADER_DATA_TYPE = "_type";
+  private static final String HEADER_DATA_FORMAT = "_data_format";
+  private static final String HEADER_INACTIVITY = "_inactivity";
 
   private final HeadersCodec headersCodec;
 
@@ -48,10 +56,27 @@ public final class ServiceMessageCodec {
       }
     }
 
-    if (!message.headers().isEmpty()) {
+    Map<String, String> headers = new HashMap<>(message.headers());
+    if (message.qualifier() != null) {
+      headers.put(HEADER_QUALIFIER, message.qualifier());
+    }
+    if (message.streamId() != null) {
+      headers.put(HEADER_STREAM_ID, message.streamId());
+    }
+    if (message.dataType() != null) {
+      headers.put(HEADER_DATA_TYPE, message.dataType());
+    }
+    if (message.dataFormat() != null) {
+      headers.put(HEADER_DATA_FORMAT, message.dataFormat());
+    }
+    if (message.inactivity() != null) {
+      headers.put(HEADER_INACTIVITY, message.inactivity());
+    }
+
+    if (!headers.isEmpty()) { // todo maybe it is unnecessary to check
       headersBuffer = ByteBufAllocator.DEFAULT.buffer();
       try {
-        headersCodec.encode(new ByteBufOutputStream(headersBuffer), message.headers());
+        headersCodec.encode(new ByteBufOutputStream(headersBuffer), headers);
       } catch (Throwable ex) {
         ReferenceCountUtil.release(headersBuffer);
         LOGGER.error("Failed to encode headers on: {}, cause: {}", message, ex);
@@ -69,7 +94,14 @@ public final class ServiceMessageCodec {
     }
     if (headersBuffer.isReadable()) {
       try (ByteBufInputStream stream = new ByteBufInputStream(headersBuffer.slice())) {
-        builder.headers(headersCodec.decode(stream));
+        Map<String, String> headers = headersCodec.decode(stream);
+        builder
+            .qualifier(headers.remove(HEADER_QUALIFIER))
+            .streamId(headers.remove(HEADER_STREAM_ID))
+            .dataType(headers.remove(HEADER_DATA_TYPE))
+            .dataFormat(headers.remove(HEADER_DATA_FORMAT))
+            .inactivity(headers.remove(HEADER_INACTIVITY))
+            .headers(headers);
       } catch (Throwable ex) {
         LOGGER.error("Failed to decode message headers: {}, cause: {}",
             headersBuffer.toString(Charset.defaultCharset()), ex);
