@@ -256,9 +256,9 @@ public class ServiceCall {
     // noinspection unchecked
     return (T) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] {serviceInterface},
         (proxy, method, params) -> {
-          MethodInfo methodInfo = genericReturnTypes.get(method);
-          Class<?> returnType = methodInfo.parameterizedReturnType();
-          boolean requestServiceMessage = methodInfo.isRequestTypeServiceMessage();
+          final MethodInfo methodInfo = genericReturnTypes.get(method);
+          final Class<?> returnType = methodInfo.parameterizedReturnType();
+          final boolean isServiceMessage = methodInfo.isRequestTypeServiceMessage();
 
           Optional<Object> check = toStringOrEqualsOrHashCode(method.getName(), serviceInterface, params);
           if (check.isPresent()) {
@@ -273,19 +273,17 @@ public class ServiceCall {
 
             case REQUEST_RESPONSE:
               return serviceCall.requestOne(toServiceMessage(methodInfo, params), returnType)
-                  .transform(asMono(requestServiceMessage));
+                  .transform(asMono(isServiceMessage));
 
             case REQUEST_STREAM:
               return serviceCall.requestMany(toServiceMessage(methodInfo, params), returnType)
-                  .transform(asFlux(requestServiceMessage));
+                  .transform(asFlux(isServiceMessage));
 
             case REQUEST_CHANNEL:
               // if this is REQUEST_CHANNEL it means params[0] must be publisher thus its safe to cast.
-              Flux<ServiceMessage> publisher = Flux.from((Publisher) params[0])
-                  .map(data -> toServiceMessage(methodInfo, data));
-
-              return serviceCall.requestBidirectional(publisher, returnType)
-                  .transform(asFlux(requestServiceMessage));
+              return serviceCall.requestBidirectional(Flux.from((Publisher) params[0])
+                  .map(data -> toServiceMessage(methodInfo, data)), returnType)
+                  .transform(asFlux(isServiceMessage));
 
             default:
               throw new IllegalArgumentException("Communication mode is not supported: " + method);
