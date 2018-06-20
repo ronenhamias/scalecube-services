@@ -9,6 +9,8 @@ import reactor.core.publisher.Flux;
 
 public class RequestManyBenchmarksRunner {
 
+  private static final String RESPONSE_COUNT = "1000";
+
   public static void main(String[] args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args)
         .build();
@@ -17,7 +19,7 @@ public class RequestManyBenchmarksRunner {
     state.setup();
 
     BenchmarkService benchmarkService = state.service(BenchmarkService.class);
-    int responseCount = settings.responseCount();
+    int responseCount = Integer.parseInt(BenchmarksSettings.find(args, "responseCount", RESPONSE_COUNT));
     Timer timer = state.timer();
     Meter meter = state.meter("responses");
     Meter throutput = state.throutput();

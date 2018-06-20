@@ -12,13 +12,15 @@ import reactor.core.publisher.Flux;
 
 public class RequestManyCallBenchmarksRunner {
 
+  private static final String RESPONSE_COUNT = "1000";
+
   public static void main(String[] args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args).build();
     ServicesBenchmarksState state = new ServicesBenchmarksState(settings, new BenchmarkServiceImpl());
     state.setup();
 
     ServiceCall serviceCall = state.seed().call().create();
-    int responseCount = settings.responseCount();
+    int responseCount = Integer.parseInt(BenchmarksSettings.find(args, "responseCount", RESPONSE_COUNT));
     Timer timer = state.timer();
     Meter throutput = state.throutput();
 

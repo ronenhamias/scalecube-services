@@ -7,8 +7,11 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 public class BenchmarksSettings {
@@ -16,8 +19,6 @@ public class BenchmarksSettings {
   private static final int N_THREADS = Runtime.getRuntime().availableProcessors();
   private static final Duration EXECUTION_TASK_TIME = Duration.ofSeconds(60);
   private static final Duration REPORTER_PERIOD = Duration.ofSeconds(10);
-  private static final int RESPONSE_COUNT = 1000;
-  private static final int IDENTICAL_REFERENCE_COUNT = 10;
 
   private final int nThreads;
   private final Duration executionTaskTime;
@@ -25,11 +26,14 @@ public class BenchmarksSettings {
   private final File csvReporterDirectory;
   private final String taskName;
 
-  private final int responseCount;
-  private final int identicalReferenceCount;
-
   public static GenericBuilder from(String[] args) {
     return new GenericBuilder().from(args);
+  }
+
+  public static String find(String[] args, String commandName, String defValue) {
+    AtomicReference<String> result = new AtomicReference<>();
+    GenericBuilder.parse(args, Collections.singletonMap(commandName, result::set));
+    return Optional.ofNullable(result.get()).orElse(defValue);
   }
 
   private BenchmarksSettings(GenericBuilder builder) {
@@ -45,9 +49,6 @@ public class BenchmarksSettings {
     this.csvReporterDirectory = Paths.get("benchmarks", "results", taskName, time).toFile();
     // noinspection ResultOfMethodCallIgnored
     this.csvReporterDirectory.mkdirs();
-
-    this.responseCount = builder.responseCount;
-    this.identicalReferenceCount = builder.identicalReferenceCount;
   }
 
   public int nThreads() {
@@ -70,15 +71,6 @@ public class BenchmarksSettings {
     return taskName;
   }
 
-
-  public int responseCount() {
-    return responseCount;
-  }
-
-  public int identicalReferenceCount() {
-    return identicalReferenceCount;
-  }
-
   @Override
   public String toString() {
     return "BenchmarksSettings{" +
@@ -97,23 +89,8 @@ public class BenchmarksSettings {
     private Duration executionTaskTime = EXECUTION_TASK_TIME;
     private Duration reporterPeriod = REPORTER_PERIOD;
 
-    private Integer responseCount = RESPONSE_COUNT;
-    private Integer identicalReferenceCount = IDENTICAL_REFERENCE_COUNT;
-
     public GenericBuilder from(String[] args) {
-      if (args != null) {
-        for (String pair : args) {
-          String[] keyValue = pair.split("=", 2);
-          String key = keyValue[0];
-          String value = keyValue[1];
-          Consumer<String> consumer = argsConsumers.get(key);
-          if (consumer != null) {
-            consumer.accept(value);
-          } else {
-            throw new IllegalArgumentException("unknown command: " + pair);
-          }
-        }
-      }
+      parse(args, argsConsumers);
       return this;
     }
 
@@ -124,8 +101,8 @@ public class BenchmarksSettings {
           value -> executionTaskTime(Duration.ofSeconds(Long.parseLong(value))));
       this.argsConsumers.put("reporterPeriodInSec", value -> reporterPeriod(Duration.ofSeconds(Long.parseLong(value))));
 
-      this.argsConsumers.put("responseCount", value -> responseCount(Integer.parseInt(value)));
-      this.argsConsumers.put("identicalReferenceCount", value -> identicalRefCount(Integer.parseInt(value)));
+      // this.argsConsumers.put("responseCount", value -> responseCount(Integer.parseInt(value)));
+      // this.argsConsumers.put("identicalReferenceCount", value -> identicalRefCount(Integer.parseInt(value)));
     }
 
     public GenericBuilder nThreads(Integer nThreads) {
@@ -143,21 +120,11 @@ public class BenchmarksSettings {
       return this;
     }
 
-    public GenericBuilder responseCount(Integer responseCount) {
-      this.responseCount = responseCount;
-      return this;
-    }
-
-    public GenericBuilder identicalRefCount(Integer identicalReferenceCount) {
-      this.identicalReferenceCount = identicalReferenceCount;
-      return this;
-    }
-
     public BenchmarksSettings build() {
       return new BenchmarksSettings(this);
     }
 
-    private void parse(String[] args, Map<String, Consumer<String>> consumers) {
+    private static void parse(String[] args, Map<String, Consumer<String>> consumers) {
       if (args != null) {
         for (String pair : args) {
           String[] keyValue = pair.split("=", 2);
@@ -166,8 +133,6 @@ public class BenchmarksSettings {
           Consumer<String> consumer = consumers.get(key);
           if (consumer != null) {
             consumer.accept(value);
-          } else {
-            throw new IllegalArgumentException("unknown command: " + pair);
           }
         }
       }

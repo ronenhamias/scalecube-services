@@ -16,11 +16,15 @@ import java.util.stream.IntStream;
 
 public class RouterBenchmarksState extends GenericBenchmarksState {
 
+  private static final int IDENTICAL_REFERENCE_COUNT = 10;
+
   private final ServiceRegistryImpl serviceRegistry = new ServiceRegistryImpl();
   private final Router router = new RoundRobinServiceRouter();
 
   public RouterBenchmarksState(BenchmarksSettings settings) {
     super(settings);
+    int identicalReferenceCount = Integer.parseInt(BenchmarksSettings.find(args, "responseCount", RESPONSE_COUNT));
+
     List<Microservices.ServiceInfo> services =
         Collections.singletonList(new Microservices.ServiceInfo(new RouterBenchmarks.RouterBenchmarksServiceImpl()));
     IntStream.rangeClosed(0, settings.identicalReferenceCount()).forEach(i -> {

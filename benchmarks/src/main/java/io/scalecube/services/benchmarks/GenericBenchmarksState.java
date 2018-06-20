@@ -28,9 +28,13 @@ public class GenericBenchmarksState {
     this.settings = settings;
   }
 
-  protected void beforeAll() {}
+  protected void beforeAll() {
+    // NOP
+  }
 
-  protected void afterAll() {}
+  protected void afterAll() {
+    // NOP
+  }
 
   public final void setup() {
     System.err.println("Benchmarks settings: " + settings);
