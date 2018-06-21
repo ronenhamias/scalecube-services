@@ -67,11 +67,13 @@ public class BenchmarksState<T extends BenchmarksState<T>> {
     beforeAll();
 
     consoleReporter.start(settings.reporterPeriod().toMillis(), TimeUnit.MILLISECONDS);
-    csvReporter.start(settings.reporterPeriod().toMillis(), TimeUnit.MILLISECONDS);
+    csvReporter.start(1, TimeUnit.DAYS);
 
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-      consoleReporter.report();
-      csvReporter.report();
+      if (started.get()) {
+        csvReporter.report();
+        consoleReporter.report();
+      }
     }));
 
   }
