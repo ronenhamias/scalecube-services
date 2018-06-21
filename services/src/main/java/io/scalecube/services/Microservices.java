@@ -5,7 +5,6 @@ import static java.util.Objects.requireNonNull;
 
 import io.scalecube.cluster.Cluster;
 import io.scalecube.cluster.ClusterConfig;
-import io.scalecube.cluster.membership.IdGenerator;
 import io.scalecube.services.ServiceCall.Call;
 import io.scalecube.services.discovery.ServiceDiscovery;
 import io.scalecube.services.discovery.ServiceScanner;
@@ -119,7 +118,6 @@ public class Microservices {
   private final ClusterConfig.Builder clusterConfig;
 
   private Cluster cluster; // calculated field
-  private String id;
 
   private Microservices(Builder builder) {
 
@@ -127,7 +125,7 @@ public class Microservices {
     this.metrics = builder.metrics;
     this.client = builder.client;
     this.server = builder.server;
-    this.id = IdGenerator.generateId();
+
     this.services = builder.services.stream().map(mapper -> mapper.serviceInstance).collect(Collectors.toList());
     this.serviceHandlers = LocalServiceHandlers.builder()
         .services(builder.services.stream().map(ServiceInfo::service).collect(Collectors.toList())).build();
@@ -142,7 +140,6 @@ public class Microservices {
       // TODO: pass tags as well [sergeyr]
       serviceRegistry.registerService(ServiceScanner.scan(
           builder.services,
-          this.id(),
           serviceAddress.host(),
           serviceAddress.port(),
           new HashMap<>()));
@@ -153,10 +150,12 @@ public class Microservices {
     clusterConfig = builder.clusterConfig;
   }
 
-  public String id() {
-    return this.id;
+  private Mono<Microservices> start() {
+    clusterConfig.addMetadata(serviceRegistry.listServiceEndpoints().stream()
+        .collect(Collectors.toMap(ServiceDiscovery::encodeMetadata, service -> SERVICE_METADATA)));
+    return Mono.fromFuture(Cluster.join(clusterConfig.build())).map(this::init);
   }
-  
+
   public Metrics metrics() {
     return this.metrics;
   }
@@ -248,12 +247,6 @@ public class Microservices {
       return new ServiceBuilder(serviceInstance, this);
     }
 
-  }
-
-  private Mono<Microservices> start() {
-    clusterConfig.addMetadata(serviceRegistry.listServiceEndpoints().stream()
-        .collect(Collectors.toMap(ServiceDiscovery::encodeMetadata, service -> SERVICE_METADATA)));
-    return Mono.fromFuture(Cluster.join(clusterConfig.build())).map(this::init);
   }
 
   private Microservices init(Cluster cluster) {
