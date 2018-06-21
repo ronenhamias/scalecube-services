@@ -10,7 +10,6 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -21,7 +20,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
-public class BenchmarksState {
+public class BenchmarksState<T extends BenchmarksState<T>> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(BenchmarksState.class);
 
@@ -65,16 +64,16 @@ public class BenchmarksState {
 
     scheduler = Schedulers.fromExecutor(Executors.newFixedThreadPool(settings.nThreads()));
 
-    Duration reporterPeriod = settings.reporterPeriod();
-    consoleReporter.start(reporterPeriod.toMillis(), TimeUnit.MILLISECONDS);
-    csvReporter.start(reporterPeriod.toMillis(), TimeUnit.MILLISECONDS);
+    beforeAll();
+
+    consoleReporter.start(settings.reporterPeriod().toMillis(), TimeUnit.MILLISECONDS);
+    csvReporter.start(settings.reporterPeriod().toMillis(), TimeUnit.MILLISECONDS);
 
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       consoleReporter.report();
       csvReporter.report();
     }));
 
-    beforeAll();
   }
 
   public final void shutdown() {
@@ -115,11 +114,12 @@ public class BenchmarksState {
     return settings.registry().histogram(settings.taskName() + "-" + name);
   }
 
-  public final Object blockLastObject(Function<BenchmarksState, Function<Long, Object>> func) {
+  public final void blockLastObject(Function<T, Function<Long, Object>> func) {
     try {
       start();
-      Function<Long, Object> func1 = func.apply(this);
-      return Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
+      // noinspection unchecked
+      Function<Long, Object> func1 = func.apply((T) this);
+      Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
           .publishOn(scheduler())
           .map(func1))
           .take(settings.executionTaskTime())
@@ -129,11 +129,12 @@ public class BenchmarksState {
     }
   }
 
-  public final Object blockLastPublisher(Function<BenchmarksState, Function<Long, Publisher<?>>> func) {
+  public final void blockLastPublisher(Function<T, Function<Long, Publisher<?>>> func) {
     try {
       start();
-      Function<Long, Publisher<?>> func1 = func.apply(this);
-      return Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
+      // noinspection unchecked
+      Function<Long, Publisher<?>> func1 = func.apply((T) this);
+      Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
           .publishOn(scheduler())
           .map(func1))
           .take(settings.executionTaskTime())

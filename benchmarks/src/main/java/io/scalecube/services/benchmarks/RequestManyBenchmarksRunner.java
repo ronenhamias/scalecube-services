@@ -9,10 +9,8 @@ public class RequestManyBenchmarksRunner {
 
   public static void main(String[] args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args).build();
+    new ServicesBenchmarksState(settings, new BenchmarkServiceImpl()).blockLastPublisher(state -> {
 
-    ServicesBenchmarksState state = new ServicesBenchmarksState(settings, new BenchmarkServiceImpl());
-
-    state.blockLastPublisher(benchmarksState -> {
       BenchmarkService benchmarkService = state.service(BenchmarkService.class);
       int responseCount = Integer.parseInt(settings.find("responseCount", RESPONSE_COUNT));
       Timer timer = state.timer("timer");

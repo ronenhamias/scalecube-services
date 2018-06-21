@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 
-public class RouterBenchmarksState extends BenchmarksState {
+public class RouterBenchmarksState extends BenchmarksState<RouterBenchmarksState> {
 
   private static final String IDENTICAL_REFERENCE_COUNT = "100";
 

@@ -8,6 +8,8 @@ import io.scalecube.services.routing.Router;
 
 import com.codahale.metrics.Timer;
 
+import java.util.concurrent.TimeUnit;
+
 public class RouterBenchmarksRunner {
 
   private static final String NAMESPACE = "benchmark";
@@ -17,10 +19,8 @@ public class RouterBenchmarksRunner {
       .build();
 
   public static void main(String[] args) {
-    BenchmarksSettings settings = BenchmarksSettings.from(args).build();
-    RouterBenchmarksState state = new RouterBenchmarksState(settings);
-
-    state.blockLastObject(benchmarksState -> {
+    BenchmarksSettings settings = BenchmarksSettings.from(args).durationUnit(TimeUnit.NANOSECONDS).build();
+    new RouterBenchmarksState(settings).blockLastObject(state -> {
 
       Timer timer = state.timer("timer");
       Router router = state.getRouter();

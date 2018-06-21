@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 
-public class ServicesBenchmarksState extends BenchmarksState {
+public class ServicesBenchmarksState extends BenchmarksState<ServicesBenchmarksState> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ServicesBenchmarksState.class);
 

@@ -12,9 +12,7 @@ public class RequestManyCallBenchmarksRunner {
 
   public static void main(String[] args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args).build();
-    ServicesBenchmarksState state = new ServicesBenchmarksState(settings, new BenchmarkServiceImpl());
-
-    state.blockLastPublisher(benchmarksState -> {
+    new ServicesBenchmarksState(settings, new BenchmarkServiceImpl()).blockLastPublisher(state -> {
 
       ServiceCall serviceCall = state.serviceCall();
       int responseCount = Integer.parseInt(settings.find("responseCount", RESPONSE_COUNT));

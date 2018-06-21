@@ -6,9 +6,7 @@ public class OneWayBenchmarksRunner {
 
   public static void main(String[] args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args).build();
-    ServicesBenchmarksState state = new ServicesBenchmarksState(settings, new BenchmarkServiceImpl());
-
-    state.blockLastPublisher(benchmarksState -> {
+    new ServicesBenchmarksState(settings, new BenchmarkServiceImpl()).blockLastPublisher(state -> {
 
       BenchmarkService benchmarkService = state.service(BenchmarkService.class);
       Timer timer = state.timer("timer");
