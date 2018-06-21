@@ -11,18 +11,23 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class BenchmarksSettings {
 
   private static final int N_THREADS = Runtime.getRuntime().availableProcessors();
   private static final Duration EXECUTION_TASK_TIME = Duration.ofSeconds(60);
   private static final Duration REPORTER_PERIOD = Duration.ofSeconds(10);
+  public static final TimeUnit DURATION_UNIT = TimeUnit.NANOSECONDS;
+  public static final TimeUnit RATE_UNIT = TimeUnit.SECONDS;
 
   private final int nThreads;
   private final Duration executionTaskTime;
   private final Duration reporterPeriod;
   private final File csvReporterDirectory;
   private final String taskName;
+  private final TimeUnit durationUnit;
+  private final TimeUnit rateUnit;
   private final MetricRegistry registry;
 
   private final Map<String, String> options;
@@ -39,6 +44,9 @@ public class BenchmarksSettings {
     this.options = builder.options;
 
     this.registry = new MetricRegistry();
+
+    this.durationUnit = builder.durationUnit;
+    this.rateUnit = builder.rateUnit;
 
     StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
     this.taskName = stackTrace[stackTrace.length - 1].getClassName();
@@ -78,16 +86,28 @@ public class BenchmarksSettings {
     return registry;
   }
 
+  public TimeUnit durationUnit() {
+    return durationUnit;
+  }
+
+  public TimeUnit rateUnit() {
+    return rateUnit;
+  }
+
   @Override
   public String toString() {
-    return "BenchmarksSettings{" +
-        "nThreads=" + nThreads +
-        ", executionTaskTime=" + executionTaskTime +
-        ", reporterPeriod=" + reporterPeriod +
-        ", csvReporterDirectory=" + csvReporterDirectory +
-        ", taskName='" + taskName + '\'' +
-        ", options=" + options +
-        '}';
+    final StringBuilder sb = new StringBuilder("BenchmarksSettings{");
+    sb.append("nThreads=").append(nThreads);
+    sb.append(", executionTaskTime=").append(executionTaskTime);
+    sb.append(", reporterPeriod=").append(reporterPeriod);
+    sb.append(", csvReporterDirectory=").append(csvReporterDirectory);
+    sb.append(", taskName='").append(taskName).append('\'');
+    sb.append(", durationUnit=").append(durationUnit);
+    sb.append(", rateUnit=").append(rateUnit);
+    sb.append(", registry=").append(registry);
+    sb.append(", options=").append(options);
+    sb.append('}');
+    return sb.toString();
   }
 
   public static class Builder {
@@ -96,6 +116,8 @@ public class BenchmarksSettings {
     private Integer nThreads = N_THREADS;
     private Duration executionTaskTime = EXECUTION_TASK_TIME;
     private Duration reporterPeriod = REPORTER_PERIOD;
+    private TimeUnit durationUnit = DURATION_UNIT;
+    private TimeUnit rateUnit = RATE_UNIT;
 
     public Builder from(String[] args) {
       this.parse(args);
@@ -121,6 +143,16 @@ public class BenchmarksSettings {
 
     public Builder addOption(String key, String value) {
       this.options.put(key, value);
+      return this;
+    }
+
+    public Builder durationUnit(TimeUnit durationUnit) {
+      this.durationUnit = durationUnit;
+      return this;
+    }
+
+    public Builder rateUnit(TimeUnit rateUnit) {
+      this.rateUnit = rateUnit;
       return this;
     }
 

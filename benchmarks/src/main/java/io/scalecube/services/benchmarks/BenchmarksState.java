@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.LongStream;
 
@@ -30,6 +31,8 @@ public class BenchmarksState {
   private Scheduler scheduler;
   private CsvReporter csvReporter;
 
+  private final AtomicBoolean started = new AtomicBoolean();
+
   public BenchmarksState(BenchmarksSettings settings) {
     this.settings = settings;
   }
@@ -42,18 +45,22 @@ public class BenchmarksState {
     // NOP
   }
 
-  private void setUp() {
+  public final void start() {
+    if (!started.compareAndSet(false, true)) {
+      throw new IllegalStateException("BenchmarksState is already started");
+    }
+
     LOGGER.info("Benchmarks settings: " + settings);
 
     consoleReporter = ConsoleReporter.forRegistry(settings.registry())
         .outputTo(System.out)
-        .convertDurationsTo(TimeUnit.NANOSECONDS)
-        .convertRatesTo(TimeUnit.SECONDS)
+        .convertDurationsTo(settings.durationUnit())
+        .convertRatesTo(settings.rateUnit())
         .build();
 
     csvReporter = CsvReporter.forRegistry(settings.registry())
-        .convertDurationsTo(TimeUnit.NANOSECONDS)
-        .convertRatesTo(TimeUnit.SECONDS)
+        .convertDurationsTo(settings.durationUnit())
+        .convertRatesTo(settings.rateUnit())
         .build(settings.csvReporterDirectory());
 
     scheduler = Schedulers.fromExecutor(Executors.newFixedThreadPool(settings.nThreads()));
@@ -70,7 +77,11 @@ public class BenchmarksState {
     beforeAll();
   }
 
-  private void tearDown() {
+  public final void shutdown() {
+    if (!started.compareAndSet(true, false)) {
+      throw new IllegalStateException("BenchmarksState is not started");
+    }
+
     if (consoleReporter != null) {
       consoleReporter.report();
       consoleReporter.stop();
@@ -106,7 +117,7 @@ public class BenchmarksState {
 
   public final Object blockLastObject(Function<BenchmarksState, Function<Long, Object>> func) {
     try {
-      setUp();
+      start();
       Function<Long, Object> func1 = func.apply(this);
       return Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
           .publishOn(scheduler())
@@ -114,13 +125,13 @@ public class BenchmarksState {
           .take(settings.executionTaskTime())
           .blockLast();
     } finally {
-      tearDown();
+      shutdown();
     }
   }
 
   public final Object blockLastPublisher(Function<BenchmarksState, Function<Long, Publisher<?>>> func) {
     try {
-      setUp();
+      start();
       Function<Long, Publisher<?>> func1 = func.apply(this);
       return Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
           .publishOn(scheduler())
@@ -128,7 +139,7 @@ public class BenchmarksState {
           .take(settings.executionTaskTime())
           .blockLast();
     } finally {
-      tearDown();
+      shutdown();
     }
   }
 
