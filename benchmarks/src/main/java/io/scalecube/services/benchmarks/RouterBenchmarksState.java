@@ -16,7 +16,7 @@ import java.util.stream.IntStream;
 
 public class RouterBenchmarksState extends BenchmarksState {
 
-  private static final String IDENTICAL_REFERENCE_COUNT = "10";
+  private static final String IDENTICAL_REFERENCE_COUNT = "100";
 
   private final ServiceRegistryImpl serviceRegistry = new ServiceRegistryImpl();
   private final Router router = new RoundRobinServiceRouter();
