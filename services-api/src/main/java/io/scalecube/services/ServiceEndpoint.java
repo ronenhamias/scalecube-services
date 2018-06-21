@@ -10,7 +10,6 @@ public class ServiceEndpoint {
   private int port;
   private Map<String, String> tags;
   private Collection<ServiceRegistration> serviceRegistrations;
-  private String memberId;
 
   /**
    * @deprecated exposed only for deserialization purpose.
@@ -18,22 +17,17 @@ public class ServiceEndpoint {
   public ServiceEndpoint() {}
 
   public ServiceEndpoint(String id,
-      String memberId,
       String host,
       int port,
       Map<String, String> tags,
       Collection<ServiceRegistration> serviceRegistrations) {
     this.id = id;
-    this.memberId = memberId;
     this.host = host;
     this.port = port;
     this.tags = tags;
     this.serviceRegistrations = serviceRegistrations;
   }
 
-  public String memberId() {
-    return this.memberId;
-  }
   
   public String id() {
     return id;

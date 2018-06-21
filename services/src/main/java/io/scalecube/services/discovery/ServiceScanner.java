@@ -18,9 +18,9 @@ import java.util.stream.Collectors;
 
 public class ServiceScanner {
 
-  public static ServiceEndpoint scan(List<Microservices.ServiceInfo> serviceInstances,String memberId, String host, int port,
+  public static ServiceEndpoint scan(List<Microservices.ServiceInfo> serviceInstances,String endpointId, String host, int port,
       Map<String, String> endpointTags) {
-    String endpointId = IdGenerator.generateId();
+    
     List<ServiceRegistration> serviceRegistrations = serviceInstances.stream()
         .flatMap(inst -> Arrays.stream(inst.service().getClass().getInterfaces())
             .map(serviceInterface -> new InterfaceInfo(serviceInterface, inst.tags())))
@@ -45,7 +45,7 @@ public class ServiceScanner {
               serviceTags,
               actions);
         }).collect(Collectors.toList());
-    return new ServiceEndpoint(endpointId, memberId, host, port, endpointTags, serviceRegistrations);
+    return new ServiceEndpoint(endpointId, host, port, endpointTags, serviceRegistrations);
   }
 
   private static class InterfaceInfo {
