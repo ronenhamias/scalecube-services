@@ -8,7 +8,7 @@ import io.scalecube.services.routing.Router;
 
 import com.codahale.metrics.Timer;
 
-public class RouterBenchmarks {
+public class RouterBenchmarksRunner {
 
   private static final String NAMESPACE = "benchmark";
   private static final String ACTION = "method1";
