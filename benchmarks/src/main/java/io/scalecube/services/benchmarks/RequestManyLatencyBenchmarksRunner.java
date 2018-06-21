@@ -6,15 +6,12 @@ import com.codahale.metrics.Timer;
 
 import reactor.core.publisher.Flux;
 
-import java.time.Duration;
 import java.util.stream.LongStream;
 
 public class RequestManyLatencyBenchmarksRunner {
 
   public static void main(String[] args) {
-    
     ServicesBenchmarksSettings settings = ServicesBenchmarksSettings.from(args)
-        .responseCount(5_000_000)
         .build();
 
     ServicesBenchmarksState state = new ServicesBenchmarksState(settings, new BenchmarkServiceImpl());
@@ -25,8 +22,8 @@ public class RequestManyLatencyBenchmarksRunner {
     Timer timer = state.timer();
     Meter meter = state.meter("throughput");
     Histogram latnecy = state.histogram("latency-nano");
-    Flux.merge(Flux.fromStream(LongStream.range(0, Runtime.getRuntime().availableProcessors()).boxed())
-        .parallel()
+    Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
+        .parallel(Runtime.getRuntime().availableProcessors())
         .runOn(state.scheduler())
         .map(i -> {
           Timer.Context timeContext = timer.time();
@@ -37,7 +34,7 @@ public class RequestManyLatencyBenchmarksRunner {
               })
               .doFinally(next -> timeContext.stop());
         }))
-        .take(Duration.ofMinutes(5))
+        .take(settings.executionTaskTime())
         .blockLast();
 
     state.tearDown();

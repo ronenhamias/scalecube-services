@@ -16,6 +16,7 @@ public class ServiceReference {
   private Map<String, String> tags;
   private String action;
   private CommunicationMode mode;
+  private String memberId;
 
   /**
    * @deprecated exposed only for deserialization purpose.
@@ -26,6 +27,7 @@ public class ServiceReference {
       ServiceRegistration serviceRegistration,
       ServiceEndpoint serviceEndpoint) {
     this.endpointId = serviceEndpoint.id();
+    this.memberId = serviceEndpoint.memberId();
     this.host = serviceEndpoint.host();
     this.port = serviceEndpoint.port();
     this.namespace = serviceRegistration.namespace();
@@ -34,6 +36,10 @@ public class ServiceReference {
     this.action = serviceMethodDefinition.getAction();
     this.mode = serviceMethodDefinition.getCommunicationMode();
     this.qualifier = Qualifier.asString(namespace, action);
+  }
+
+  public String memberId() {
+    return this.memberId;
   }
   
   public CommunicationMode mode() {
