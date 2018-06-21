@@ -6,10 +6,6 @@ import io.scalecube.services.api.ServiceMessage;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
 
-import java.util.stream.LongStream;
-
-import reactor.core.publisher.Flux;
-
 public class RequestManyCallBenchmarksRunner {
 
   private static final String RESPONSE_COUNT = "1000";
@@ -17,30 +13,25 @@ public class RequestManyCallBenchmarksRunner {
   public static void main(String[] args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args).build();
     ServicesBenchmarksState state = new ServicesBenchmarksState(settings, new BenchmarkServiceImpl());
-    state.setup();
 
-    ServiceCall serviceCall = state.seed().call().create();
-    int responseCount = Integer.parseInt(settings.find("responseCount", RESPONSE_COUNT));
-    Timer timer = state.timer();
-    Meter throutput = state.throutput();
+    state.blockLastPublisher(benchmarksState -> {
 
-    ServiceMessage message = ServiceMessage.builder()
-        .qualifier(BenchmarkService.class.getName(), "requestMany")
-        .data(responseCount)
-        .build();
+      ServiceCall serviceCall = state.serviceCall();
+      int responseCount = Integer.parseInt(settings.find("responseCount", RESPONSE_COUNT));
+      Timer timer = state.timer("timer");
+      Meter meter = state.meter("responses");
 
-    Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
-        .publishOn(state.scheduler())
-        .map(i -> {
-          Timer.Context timeContext = timer.time();
-          return serviceCall.requestMany(message).doOnNext(next -> {
-            timeContext.stop();
-            throutput.mark();
-          });
-        }))
-        .take(settings.executionTaskTime())
-        .blockLast();
+      ServiceMessage message = ServiceMessage.builder()
+          .qualifier(BenchmarkService.class.getName(), "requestMany")
+          .data(responseCount)
+          .build();
 
-    state.tearDown();
+      return i -> {
+        Timer.Context timeContext = timer.time();
+        return serviceCall.requestMany(message)
+            .doOnNext(onNext -> meter.mark())
+            .doFinally(next -> timeContext.stop());
+      };
+    });
   }
 }

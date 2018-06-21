@@ -3,13 +3,10 @@ package io.scalecube.services.benchmarks;
 import io.scalecube.services.ServiceReference;
 import io.scalecube.services.api.Qualifier;
 import io.scalecube.services.api.ServiceMessage;
+import io.scalecube.services.registry.ServiceRegistryImpl;
+import io.scalecube.services.routing.Router;
 
-import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
-
-import java.util.stream.LongStream;
-
-import reactor.core.publisher.Flux;
 
 public class RouterBenchmarks {
 
@@ -22,23 +19,19 @@ public class RouterBenchmarks {
   public static void main(String[] args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args).build();
     RouterBenchmarksState state = new RouterBenchmarksState(settings);
-    state.setup();
 
-    Timer timer = state.timer();
-    Meter throutput = state.throutput();
+    state.blockLastObject(benchmarksState -> {
 
-    Flux.merge((Flux<ServiceReference>) Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
-        .publishOn(state.scheduler())
-        .map(i -> {
-          Timer.Context timeContext = timer.time();
-          ServiceReference serviceReference = state.getRouter().route(state.getServiceRegistry(), MESSAGE).get();
-          timeContext.stop();
-          throutput.mark();
-          return serviceReference;
-        }))
-        .take(settings.executionTaskTime())
-        .blockLast();
+      Timer timer = state.timer("timer");
+      Router router = state.getRouter();
+      ServiceRegistryImpl serviceRegistry = state.getServiceRegistry();
 
-    state.tearDown();
+      return i -> {
+        Timer.Context timeContext = timer.time();
+        ServiceReference serviceReference = router.route(serviceRegistry, MESSAGE).get();
+        timeContext.stop();
+        return serviceReference;
+      };
+    });
   }
 }

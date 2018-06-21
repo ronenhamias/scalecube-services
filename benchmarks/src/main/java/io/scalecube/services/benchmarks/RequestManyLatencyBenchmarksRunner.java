@@ -4,41 +4,31 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
 
-import java.util.stream.LongStream;
-
-import reactor.core.publisher.Flux;
-
 public class RequestManyLatencyBenchmarksRunner {
 
   private static final String RESPONSE_COUNT = "1000";
 
   public static void main(String[] args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args).build();
-
     ServicesBenchmarksState state = new ServicesBenchmarksState(settings, new BenchmarkServiceImpl());
-    state.setup();
 
-    BenchmarkService benchmarkService = state.service(BenchmarkService.class);
-    int responseCount = Integer.parseInt(settings.find("responseCount", RESPONSE_COUNT));
-    Timer timer = state.timer();
-    Meter meter = state.throutput();
-    Histogram latency = state.histogram("latency-nano");
+    state.blockLastPublisher(benchmarksState -> {
 
-    Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
-        .parallel(Runtime.getRuntime().availableProcessors())
-        .runOn(state.scheduler())
-        .map(i -> {
-          Timer.Context timeContext = timer.time();
-          return benchmarkService.nanoTime(responseCount)
-              .doOnNext(onNext -> {
-                latency.update(System.nanoTime() - onNext);
-                meter.mark();
-              })
-              .doFinally(next -> timeContext.stop());
-        }))
-        .take(settings.executionTaskTime())
-        .blockLast();
+      BenchmarkService benchmarkService = state.service(BenchmarkService.class);
+      int responseCount = Integer.parseInt(settings.find("responseCount", RESPONSE_COUNT));
+      Timer timer = state.timer("timer");
+      Meter responses = state.meter("responses");
+      Histogram latency = state.histogram("latency");
 
-    state.tearDown();
+      return i -> {
+        Timer.Context timeContext = timer.time();
+        return benchmarkService.nanoTime(responseCount)
+            .doOnNext(onNext -> {
+              latency.update(System.nanoTime() - onNext);
+              responses.mark();
+            })
+            .doFinally(next -> timeContext.stop());
+      };
+    });
   }
 }

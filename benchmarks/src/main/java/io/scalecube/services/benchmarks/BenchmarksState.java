@@ -7,14 +7,23 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 
+import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.LongStream;
 
+import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
-public class GenericBenchmarksState {
+public class BenchmarksState {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(BenchmarksState.class);
 
   private final BenchmarksSettings settings;
 
@@ -23,8 +32,7 @@ public class GenericBenchmarksState {
   private Scheduler scheduler;
   private CsvReporter csvReporter;
 
-
-  public GenericBenchmarksState(BenchmarksSettings settings) {
+  public BenchmarksState(BenchmarksSettings settings) {
     this.settings = settings;
   }
 
@@ -36,19 +44,19 @@ public class GenericBenchmarksState {
     // NOP
   }
 
-  public final void setup() {
-    System.err.println("Benchmarks settings: " + settings);
+  private void setUp() {
+    LOGGER.info("Benchmarks settings: " + settings);
 
     registry = new MetricRegistry();
 
     consoleReporter = ConsoleReporter.forRegistry(registry)
-        .outputTo(System.err)
-        .convertDurationsTo(TimeUnit.MILLISECONDS)
+        .outputTo(System.out)
+        .convertDurationsTo(TimeUnit.NANOSECONDS)
         .convertRatesTo(TimeUnit.SECONDS)
         .build();
 
     csvReporter = CsvReporter.forRegistry(registry)
-        .convertDurationsTo(TimeUnit.MILLISECONDS)
+        .convertDurationsTo(TimeUnit.NANOSECONDS)
         .convertRatesTo(TimeUnit.SECONDS)
         .build(settings.csvReporterDirectory());
 
@@ -66,7 +74,7 @@ public class GenericBenchmarksState {
     beforeAll();
   }
 
-  public final void tearDown() {
+  private void tearDown() {
     if (consoleReporter != null) {
       consoleReporter.report();
       consoleReporter.stop();
@@ -92,20 +100,44 @@ public class GenericBenchmarksState {
     return scheduler;
   }
 
-  public Timer timer() {
-    return registry.timer(settings.taskName() + "-timer");
+  public Timer timer(String name) {
+    return registry.timer(settings.taskName() + "-" + name);
   }
 
   public Meter meter(String name) {
     return registry.meter(settings.taskName() + "-" + name);
   }
 
-  public Meter throutput() {
-    return meter("throughput");
-  }
-
   public Histogram histogram(String name) {
     return registry.histogram(settings.taskName() + "-" + name);
+  }
+
+  public final Object blockLastObject(Function<BenchmarksState, Function<Long, Object>> func) {
+    try {
+      setUp();
+      Function<Long, Object> func1 = func.apply(this);
+      return Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
+          .publishOn(scheduler())
+          .map(func1))
+          .take(settings.executionTaskTime())
+          .blockLast();
+    } finally {
+      tearDown();
+    }
+  }
+
+  public final Object blockLastPublisher(Function<BenchmarksState, Function<Long, Publisher<?>>> func) {
+    try {
+      setUp();
+      Function<Long, Publisher<?>> func1 = func.apply(this);
+      return Flux.merge(Flux.fromStream(LongStream.range(0, Long.MAX_VALUE).boxed())
+          .publishOn(scheduler())
+          .map(func1))
+          .take(settings.executionTaskTime())
+          .blockLast();
+    } finally {
+      tearDown();
+    }
   }
 
 }

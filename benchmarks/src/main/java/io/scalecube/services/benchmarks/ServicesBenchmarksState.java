@@ -1,8 +1,18 @@
 package io.scalecube.services.benchmarks;
 
 import io.scalecube.services.Microservices;
+import io.scalecube.services.ServiceCall;
 
-public class ServicesBenchmarksState extends GenericBenchmarksState {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.time.Duration;
+
+public class ServicesBenchmarksState extends BenchmarksState {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(ServicesBenchmarksState.class);
+
+  private static final Duration SHUTDOWN_TIMEOUT = Duration.ofSeconds(6);
 
   private final Object[] services;
 
@@ -26,7 +36,7 @@ public class ServicesBenchmarksState extends GenericBenchmarksState {
         .services(services)
         .startAwait();
 
-    System.err.println("seed address: " + seed.cluster().address() +
+    LOGGER.info("Seed address: " + seed.cluster().address() +
         ", services address: " + node.serviceAddress() +
         ", seed serviceRegistry: " + seed.serviceRegistry().listServiceReferences());
   }
@@ -34,11 +44,17 @@ public class ServicesBenchmarksState extends GenericBenchmarksState {
   @Override
   public void afterAll() {
     if (node != null) {
-      node.shutdown().block();
+      try {
+        node.shutdown().block(SHUTDOWN_TIMEOUT);
+      } catch (Throwable ignore) {
+      }
     }
 
     if (seed != null) {
-      seed.shutdown().block();
+      try {
+        seed.shutdown().block(SHUTDOWN_TIMEOUT);
+      } catch (Throwable ignore) {
+      }
     }
   }
 
@@ -50,4 +66,7 @@ public class ServicesBenchmarksState extends GenericBenchmarksState {
     return seed.call().create().api(c);
   }
 
+  public ServiceCall serviceCall() {
+    return seed.call().create();
+  }
 }
