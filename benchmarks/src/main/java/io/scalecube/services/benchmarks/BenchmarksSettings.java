@@ -1,5 +1,7 @@
 package io.scalecube.services.benchmarks;
 
+import com.codahale.metrics.MetricRegistry;
+
 import java.io.File;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -21,19 +23,22 @@ public class BenchmarksSettings {
   private final Duration reporterPeriod;
   private final File csvReporterDirectory;
   private final String taskName;
+  private final MetricRegistry registry;
 
   private final Map<String, String> options;
 
-  public static GenericBuilder from(String[] args) {
-    return new GenericBuilder().from(args);
+  public static Builder from(String[] args) {
+    return new Builder().from(args);
   }
 
-  private BenchmarksSettings(GenericBuilder builder) {
+  private BenchmarksSettings(Builder builder) {
     this.nThreads = builder.nThreads;
     this.executionTaskTime = builder.executionTaskTime;
     this.reporterPeriod = builder.reporterPeriod;
 
     this.options = builder.options;
+
+    this.registry = new MetricRegistry();
 
     StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
     this.taskName = stackTrace[stackTrace.length - 1].getClassName();
@@ -69,6 +74,10 @@ public class BenchmarksSettings {
     return options.getOrDefault(key, defValue);
   }
 
+  public MetricRegistry registry() {
+    return registry;
+  }
+
   @Override
   public String toString() {
     return "BenchmarksSettings{" +
@@ -81,37 +90,36 @@ public class BenchmarksSettings {
         '}';
   }
 
-  public static class GenericBuilder {
+  public static class Builder {
     private final Map<String, String> options = new HashMap<>();
 
     private Integer nThreads = N_THREADS;
     private Duration executionTaskTime = EXECUTION_TASK_TIME;
     private Duration reporterPeriod = REPORTER_PERIOD;
 
-    public GenericBuilder from(String[] args) {
+    public Builder from(String[] args) {
       this.parse(args);
       return this;
     }
 
-    private GenericBuilder() {
-    }
+    private Builder() {}
 
-    public GenericBuilder nThreads(Integer nThreads) {
+    public Builder nThreads(Integer nThreads) {
       this.nThreads = nThreads;
       return this;
     }
 
-    public GenericBuilder executionTaskTime(Duration executionTaskTime) {
+    public Builder executionTaskTime(Duration executionTaskTime) {
       this.executionTaskTime = executionTaskTime;
       return this;
     }
 
-    public GenericBuilder reporterPeriod(Duration reporterPeriod) {
+    public Builder reporterPeriod(Duration reporterPeriod) {
       this.reporterPeriod = reporterPeriod;
       return this;
     }
 
-    public GenericBuilder addOption(String key, String value) {
+    public Builder addOption(String key, String value) {
       this.options.put(key, value);
       return this;
     }

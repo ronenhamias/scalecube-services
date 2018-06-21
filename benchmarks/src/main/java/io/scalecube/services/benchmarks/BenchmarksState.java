@@ -4,7 +4,6 @@ import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.CsvReporter;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
-import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 
 import org.reactivestreams.Publisher;
@@ -25,9 +24,8 @@ public class BenchmarksState {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(BenchmarksState.class);
 
-  private final BenchmarksSettings settings;
+  protected final BenchmarksSettings settings;
 
-  private MetricRegistry registry;
   private ConsoleReporter consoleReporter;
   private Scheduler scheduler;
   private CsvReporter csvReporter;
@@ -47,15 +45,13 @@ public class BenchmarksState {
   private void setUp() {
     LOGGER.info("Benchmarks settings: " + settings);
 
-    registry = new MetricRegistry();
-
-    consoleReporter = ConsoleReporter.forRegistry(registry)
+    consoleReporter = ConsoleReporter.forRegistry(settings.registry())
         .outputTo(System.out)
         .convertDurationsTo(TimeUnit.NANOSECONDS)
         .convertRatesTo(TimeUnit.SECONDS)
         .build();
 
-    csvReporter = CsvReporter.forRegistry(registry)
+    csvReporter = CsvReporter.forRegistry(settings.registry())
         .convertDurationsTo(TimeUnit.NANOSECONDS)
         .convertRatesTo(TimeUnit.SECONDS)
         .build(settings.csvReporterDirectory());
@@ -92,24 +88,20 @@ public class BenchmarksState {
     afterAll();
   }
 
-  public MetricRegistry registry() {
-    return registry;
-  }
-
   public Scheduler scheduler() {
     return scheduler;
   }
 
   public Timer timer(String name) {
-    return registry.timer(settings.taskName() + "-" + name);
+    return settings.registry().timer(settings.taskName() + "-" + name);
   }
 
   public Meter meter(String name) {
-    return registry.meter(settings.taskName() + "-" + name);
+    return settings.registry().meter(settings.taskName() + "-" + name);
   }
 
   public Histogram histogram(String name) {
-    return registry.histogram(settings.taskName() + "-" + name);
+    return settings.registry().histogram(settings.taskName() + "-" + name);
   }
 
   public final Object blockLastObject(Function<BenchmarksState, Function<Long, Object>> func) {
