@@ -137,7 +137,8 @@ public class BenchmarksSettings {
               reporterPeriod(Duration.ofSeconds(Long.parseLong(value)));
               break;
             default:
-              this.options.put(key, value);
+              addOption(key, value);
+              break;
           }
         }
       }
