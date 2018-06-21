@@ -20,7 +20,7 @@ public class RequestManyCallBenchmarksRunner {
     state.setup();
 
     ServiceCall serviceCall = state.seed().call().create();
-    int responseCount = Integer.parseInt(BenchmarksSettings.find(args, "responseCount", RESPONSE_COUNT));
+    int responseCount = Integer.parseInt(settings.find("responseCount", RESPONSE_COUNT));
     Timer timer = state.timer();
     Meter throutput = state.throutput();
 

@@ -19,7 +19,7 @@ public class RequestManyLatencyBenchmarksRunner {
     state.setup();
 
     BenchmarkService benchmarkService = state.service(BenchmarkService.class);
-    int responseCount = Integer.parseInt(BenchmarksSettings.find(args, "responseCount", RESPONSE_COUNT));
+    int responseCount = Integer.parseInt(settings.find("responseCount", RESPONSE_COUNT));
     Timer timer = state.timer();
     Meter meter = state.throutput();
     Histogram latency = state.histogram("latency-nano");

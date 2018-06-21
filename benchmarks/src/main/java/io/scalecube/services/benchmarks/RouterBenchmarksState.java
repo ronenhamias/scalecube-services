@@ -16,18 +16,19 @@ import java.util.stream.IntStream;
 
 public class RouterBenchmarksState extends GenericBenchmarksState {
 
-  private static final int IDENTICAL_REFERENCE_COUNT = 10;
+  private static final String IDENTICAL_REFERENCE_COUNT = "10";
 
   private final ServiceRegistryImpl serviceRegistry = new ServiceRegistryImpl();
   private final Router router = new RoundRobinServiceRouter();
 
   public RouterBenchmarksState(BenchmarksSettings settings) {
     super(settings);
-    int identicalReferenceCount = Integer.parseInt(BenchmarksSettings.find(args, "responseCount", RESPONSE_COUNT));
+    String value = settings.find("identicalReferenceCount", IDENTICAL_REFERENCE_COUNT);
+    int identicalReferenceCount = Integer.parseInt(value);
 
     List<Microservices.ServiceInfo> services =
         Collections.singletonList(new Microservices.ServiceInfo(new RouterBenchmarks.RouterBenchmarksServiceImpl()));
-    IntStream.rangeClosed(0, settings.identicalReferenceCount()).forEach(i -> {
+    IntStream.rangeClosed(0, identicalReferenceCount).forEach(i -> {
       Map<String, String> tags = new HashMap<>();
       tags.put("k1-" + i, "v1-" + i);
       tags.put("k2-" + i, "v2-" + i);

@@ -7,12 +7,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 public class BenchmarksSettings {
 
@@ -26,20 +22,18 @@ public class BenchmarksSettings {
   private final File csvReporterDirectory;
   private final String taskName;
 
+  private final Map<String, String> options;
+
   public static GenericBuilder from(String[] args) {
     return new GenericBuilder().from(args);
-  }
-
-  public static String find(String[] args, String commandName, String defValue) {
-    AtomicReference<String> result = new AtomicReference<>();
-    GenericBuilder.parse(args, Collections.singletonMap(commandName, result::set));
-    return Optional.ofNullable(result.get()).orElse(defValue);
   }
 
   private BenchmarksSettings(GenericBuilder builder) {
     this.nThreads = builder.nThreads;
     this.executionTaskTime = builder.executionTaskTime;
     this.reporterPeriod = builder.reporterPeriod;
+
+    this.options = builder.options;
 
     StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
     this.taskName = stackTrace[stackTrace.length - 1].getClassName();
@@ -71,6 +65,10 @@ public class BenchmarksSettings {
     return taskName;
   }
 
+  public String find(String key, String defValue) {
+    return options.getOrDefault(key, defValue);
+  }
+
   @Override
   public String toString() {
     return "BenchmarksSettings{" +
@@ -79,30 +77,23 @@ public class BenchmarksSettings {
         ", reporterPeriod=" + reporterPeriod +
         ", csvReporterDirectory=" + csvReporterDirectory +
         ", taskName='" + taskName + '\'' +
+        ", options=" + options +
         '}';
   }
 
   public static class GenericBuilder {
-    private final Map<String, Consumer<String>> argsConsumers;
+    private final Map<String, String> options = new HashMap<>();
 
     private Integer nThreads = N_THREADS;
     private Duration executionTaskTime = EXECUTION_TASK_TIME;
     private Duration reporterPeriod = REPORTER_PERIOD;
 
     public GenericBuilder from(String[] args) {
-      parse(args, argsConsumers);
+      this.parse(args);
       return this;
     }
 
     private GenericBuilder() {
-      this.argsConsumers = new HashMap<>();
-      this.argsConsumers.put("nThreads", value -> nThreads(Integer.parseInt(value)));
-      this.argsConsumers.put("executionTaskTimeInSec",
-          value -> executionTaskTime(Duration.ofSeconds(Long.parseLong(value))));
-      this.argsConsumers.put("reporterPeriodInSec", value -> reporterPeriod(Duration.ofSeconds(Long.parseLong(value))));
-
-      // this.argsConsumers.put("responseCount", value -> responseCount(Integer.parseInt(value)));
-      // this.argsConsumers.put("identicalReferenceCount", value -> identicalRefCount(Integer.parseInt(value)));
     }
 
     public GenericBuilder nThreads(Integer nThreads) {
@@ -120,19 +111,33 @@ public class BenchmarksSettings {
       return this;
     }
 
+    public GenericBuilder addOption(String key, String value) {
+      this.options.put(key, value);
+      return this;
+    }
+
     public BenchmarksSettings build() {
       return new BenchmarksSettings(this);
     }
 
-    private static void parse(String[] args, Map<String, Consumer<String>> consumers) {
+    private void parse(String[] args) {
       if (args != null) {
         for (String pair : args) {
           String[] keyValue = pair.split("=", 2);
           String key = keyValue[0];
           String value = keyValue[1];
-          Consumer<String> consumer = consumers.get(key);
-          if (consumer != null) {
-            consumer.accept(value);
+          switch (key) {
+            case "nThreads":
+              nThreads(Integer.parseInt(value));
+              break;
+            case "executionTaskTimeInSec":
+              executionTaskTime(Duration.ofSeconds(Long.parseLong(value)));
+              break;
+            case "reporterPeriodInSec":
+              reporterPeriod(Duration.ofSeconds(Long.parseLong(value)));
+              break;
+            default:
+              this.options.put(key, value);
           }
         }
       }
