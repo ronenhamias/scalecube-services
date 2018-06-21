@@ -32,7 +32,7 @@ public class RouterBenchmarksState extends BenchmarksState {
       Map<String, String> tags = new HashMap<>();
       tags.put("k1-" + i, "v1-" + i);
       tags.put("k2-" + i, "v2-" + i);
-      ServiceEndpoint serviceEndpoint = ServiceScanner.scan(services, "localhost" + i, i, tags);
+      ServiceEndpoint serviceEndpoint = ServiceScanner.scan(services, "localhost" + i, "localhost", i, tags);
       serviceRegistry.registerService(serviceEndpoint);
     });
   }

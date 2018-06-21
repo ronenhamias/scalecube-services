@@ -18,8 +18,8 @@ public class BenchmarksSettings {
   private static final int N_THREADS = Runtime.getRuntime().availableProcessors();
   private static final Duration EXECUTION_TASK_TIME = Duration.ofSeconds(60);
   private static final Duration REPORTER_PERIOD = Duration.ofSeconds(10);
-  public static final TimeUnit DURATION_UNIT = TimeUnit.NANOSECONDS;
-  public static final TimeUnit RATE_UNIT = TimeUnit.SECONDS;
+  private static final TimeUnit DURATION_UNIT = TimeUnit.NANOSECONDS;
+  private static final TimeUnit RATE_UNIT = TimeUnit.SECONDS;
 
   private final int nThreads;
   private final Duration executionTaskTime;
