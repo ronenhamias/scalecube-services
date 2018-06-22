@@ -1,7 +1,12 @@
-package io.scalecube.services;
+package io.scalecube.services.example;
 
+import io.scalecube.services.Microservices;
 import io.scalecube.services.annotations.Inject;
 import io.scalecube.services.api.ServiceMessage;
+import io.scalecube.services.example.api.CoarseGrainedService;
+import io.scalecube.services.example.api.GreetingRequest;
+import io.scalecube.services.example.api.GreetingResponse;
+import io.scalecube.services.example.api.GreetingService;
 
 import reactor.core.publisher.Mono;
 

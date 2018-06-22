@@ -39,16 +39,19 @@ public final class LocalServiceHandlers implements ServiceMessageHandler {
   }
 
   private LocalServiceHandlers(List<Object> serviceObjects) {
-    serviceObjects.forEach(service -> {
-      Reflect.serviceInterfaces(service).forEach(serviceInterface -> {
-        Reflect.serviceMethods(serviceInterface).forEach((key, method) -> {
-          // perform vailidation
-          Reflect.validateMethodOrThrow(method);
-          // then keep it
-          String qualifier = Reflect.qualifier(serviceInterface, method);
-          localServices.put(qualifier, new LocalServiceMessageHandler(qualifier, service, method));
-        });
-      });
+    serviceObjects.forEach(serviceObject -> {
+      Reflect.serviceInterfaces(serviceObject)
+          .forEach(serviceInterface -> {
+            serviceObjects.forEach(service -> {
+              Reflect.serviceMethods(service).forEach((key, method) -> {
+                // perform vailidation
+                Reflect.validateMethodOrThrow(method);
+                // then keep it
+                String qualifier = Reflect.qualifier(serviceInterface, method);
+                localServices.put(qualifier, new LocalServiceMessageHandler(qualifier, service, method));
+              });
+            });
+          });
     });
   }
 
