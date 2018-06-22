@@ -5,7 +5,6 @@ import io.scalecube.services.api.ServiceMessage;
 import io.scalecube.services.registry.api.ServiceRegistry;
 import io.scalecube.services.routing.Router;
 
-import java.util.List;
 import java.util.Optional;
 
 public class CanaryTestingRouter implements Router {

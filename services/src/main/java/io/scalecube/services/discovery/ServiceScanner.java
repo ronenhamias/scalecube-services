@@ -1,6 +1,5 @@
 package io.scalecube.services.discovery;
 
-import io.scalecube.cluster.membership.IdGenerator;
 import io.scalecube.services.CommunicationMode;
 import io.scalecube.services.Microservices;
 import io.scalecube.services.Reflect;
