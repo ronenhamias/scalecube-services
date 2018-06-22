@@ -21,6 +21,9 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -28,12 +31,12 @@ import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import java.util.stream.Stream;
 
 /**
  * Service Injector scan and injects beans to a given Microservices instance.
@@ -83,7 +86,10 @@ public class Reflect {
 
     private void processAfterConstruct(Object targetInstance) {
       Method[] declaredMethods = targetInstance.getClass().getDeclaredMethods();
-      Arrays.stream(declaredMethods)
+      Method[] superMethods = targetInstance.getClass().getSuperclass().getDeclaredMethods();
+      List<Method> methods = Stream.of(declaredMethods, superMethods).flatMap(Stream::of)
+          .collect(Collectors.toList());
+      methods.stream()
           .filter(method -> method.isAnnotationPresent(AfterConstruct.class))
           .forEach(afterConstructMethod -> {
             try {
@@ -224,11 +230,11 @@ public class Reflect {
     return Collections.unmodifiableMap(Reflect.serviceMethods(serviceInterface).values().stream()
         .collect(Collectors.toMap(method -> method,
             method1 -> new MethodInfo(
-                serviceName(serviceInterface), 
+                serviceName(serviceInterface),
                 parameterizedReturnType(method1),
-                communicationMode(method1), 
+                communicationMode(method1),
                 isRequestTypeServiceMessage(method1),
-                methodName(method1), 
+                methodName(method1),
                 method1.getParameterCount()))));
   }
 
@@ -279,14 +285,39 @@ public class Reflect {
   }
 
   /**
+   * Util function to get service Method map from service api.
+   * 
+   * @param serviceInterface with @Service annotation.
+   * @return service name.
+   */
+  public static Map<String, Method> serviceMethods(Object serviceObject) {
+    Class<?>[] classInterfaces = serviceObject.getClass().getInterfaces();
+    Class<?>[] superInterfaces = serviceObject.getClass().getSuperclass().getInterfaces();
+
+    Map<String, Method> methods = new HashMap<>();
+
+    List<Class<?>> interfaces = Stream.of(classInterfaces, superInterfaces).flatMap(Stream::of)
+        .collect(Collectors.toList());
+
+    interfaces.forEach(clazz -> methods.putAll(serviceMethods(clazz)));
+
+    return Collections.unmodifiableMap(methods);
+  }
+
+  /**
    * Util function to get service interfaces collections from service instance.
    * 
    * @param serviceObject with extends service interface with @Service annotation.
    * @return service interface class.
    */
   public static Collection<Class<?>> serviceInterfaces(Object serviceObject) {
-    Class<?>[] interfaces = serviceObject.getClass().getInterfaces();
-    return Arrays.stream(interfaces)
+    Class<?>[] classInterfaces = serviceObject.getClass().getInterfaces();
+    Class<?>[] superInterfaces = serviceObject.getClass().getSuperclass().getInterfaces();
+
+    List<Class<?>> interfaces = Stream.of(classInterfaces, superInterfaces).flatMap(Stream::of)
+        .collect(Collectors.toList());
+
+    return interfaces.stream()
         .filter(interfaceClass -> interfaceClass.isAnnotationPresent(Service.class))
         .collect(Collectors.toList());
   }
@@ -328,7 +359,7 @@ public class Reflect {
       boolean hasFluxAsReqParam = reqTypes.length > 0
           && (Flux.class.isAssignableFrom(reqTypes[0])
               || Publisher.class.isAssignableFrom(reqTypes[0]));
-      
+
       return hasFluxAsReqParam ? REQUEST_CHANNEL : REQUEST_STREAM;
     } else {
       throw new IllegalArgumentException(

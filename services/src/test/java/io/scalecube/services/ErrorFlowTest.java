@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static reactor.core.publisher.Mono.from;
 
 import io.scalecube.services.api.ServiceMessage;
+import io.scalecube.services.example.GreetingServiceImpl;
+import io.scalecube.services.example.api.GreetingResponse;
 import io.scalecube.services.exceptions.BadRequestException;
 import io.scalecube.services.exceptions.ServiceUnavailableException;
 import io.scalecube.services.exceptions.UnauthorizedException;

@@ -1,7 +1,11 @@
-package io.scalecube.services;
+package io.scalecube.services.example;
 
+import io.scalecube.services.Microservices;
 import io.scalecube.services.annotations.Inject;
 import io.scalecube.services.api.ServiceMessage;
+import io.scalecube.services.example.api.GreetingRequest;
+import io.scalecube.services.example.api.GreetingResponse;
+import io.scalecube.services.example.api.GreetingService;
 import io.scalecube.services.exceptions.UnauthorizedException;
 
 import org.reactivestreams.Publisher;
@@ -9,7 +13,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public final class GreetingServiceImpl implements GreetingService {
+public final class GreetingServiceImpl extends AbstractAService implements GreetingService  {
 
   @Inject
   Microservices ms;

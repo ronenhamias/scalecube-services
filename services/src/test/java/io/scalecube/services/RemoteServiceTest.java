@@ -12,6 +12,12 @@ import io.scalecube.services.a.b.testing.CanaryService;
 import io.scalecube.services.a.b.testing.CanaryTestingRouter;
 import io.scalecube.services.a.b.testing.GreetingServiceImplA;
 import io.scalecube.services.a.b.testing.GreetingServiceImplB;
+import io.scalecube.services.example.CoarseGrainedServiceImpl;
+import io.scalecube.services.example.GreetingServiceImpl;
+import io.scalecube.services.example.api.CoarseGrainedService;
+import io.scalecube.services.example.api.GreetingRequest;
+import io.scalecube.services.example.api.GreetingResponse;
+import io.scalecube.services.example.api.GreetingService;
 import io.scalecube.services.exceptions.InternalServiceException;
 import io.scalecube.services.routing.RoundRobinServiceRouter;
 import io.scalecube.services.routing.Routers;
@@ -121,6 +127,28 @@ public class RemoteServiceTest extends BaseTest {
 
     System.out.println("test_remote_void_greeting done.");
 
+    Thread.sleep(1000);
+
+    node1.shutdown().block();
+  }
+
+  @Test
+  public void test_remote_abstract_service_greeting() throws Exception {
+    Microservices node1 = Microservices.builder()
+        .seeds(gateway.cluster().address())
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    GreetingService service = gateway.call().create()
+        .api(GreetingService.class);
+
+    // call the service.
+    Mono<String> response = service.helloFromBase("joe");
+    // call the service.
+    StepVerifier.create(response)
+        .expectNext("Base class greetings to: joe")
+        .expectComplete()
+        .verify(Duration.ofSeconds(3));
     Thread.sleep(1000);
 
     node1.shutdown().block();

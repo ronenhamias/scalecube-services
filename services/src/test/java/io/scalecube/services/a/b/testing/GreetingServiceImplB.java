@@ -1,7 +1,7 @@
 package io.scalecube.services.a.b.testing;
 
-import io.scalecube.services.GreetingRequest;
-import io.scalecube.services.GreetingResponse;
+import io.scalecube.services.example.api.GreetingRequest;
+import io.scalecube.services.example.api.GreetingResponse;
 
 import reactor.core.publisher.Mono;
 

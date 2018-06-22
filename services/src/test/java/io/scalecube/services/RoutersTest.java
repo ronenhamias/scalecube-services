@@ -13,6 +13,10 @@ import io.scalecube.services.a.b.testing.CanaryTestingRouter;
 import io.scalecube.services.a.b.testing.GreetingServiceImplA;
 import io.scalecube.services.a.b.testing.GreetingServiceImplB;
 import io.scalecube.services.api.ServiceMessage;
+import io.scalecube.services.example.DummyRouter;
+import io.scalecube.services.example.GreetingServiceImpl;
+import io.scalecube.services.example.api.GreetingRequest;
+import io.scalecube.services.example.api.GreetingResponse;
 import io.scalecube.services.routing.RandomServiceRouter;
 import io.scalecube.services.routing.Routers;
 
