@@ -1,7 +1,7 @@
 package io.scalecube.services.routings;
 
-import io.scalecube.services.GreetingRequest;
 import io.scalecube.services.Microservices;
+import io.scalecube.services.examples.GreetingRequest;
 import io.scalecube.services.routings.examples.CanaryService;
 import io.scalecube.services.routings.examples.GreetingServiceImplA;
 import io.scalecube.services.routings.examples.GreetingServiceImplB;

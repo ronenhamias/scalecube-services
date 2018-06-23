@@ -8,27 +8,24 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.scalecube.services.BaseTest;
-import io.scalecube.services.DummyRouter;
-import io.scalecube.services.GreetingRequest;
-import io.scalecube.services.GreetingResponse;
-import io.scalecube.services.GreetingServiceImpl;
 import io.scalecube.services.Microservices;
 import io.scalecube.services.Reflect;
 import io.scalecube.services.ServiceCall;
 import io.scalecube.services.ServiceCall.Call;
-import io.scalecube.services.Util;
 import io.scalecube.services.api.ServiceMessage;
+import io.scalecube.services.examples.GreetingRequest;
+import io.scalecube.services.examples.GreetingResponse;
+import io.scalecube.services.examples.GreetingServiceImpl;
 import io.scalecube.services.routing.RandomServiceRouter;
 import io.scalecube.services.routing.Routers;
 import io.scalecube.services.routings.examples.CanaryService;
+import io.scalecube.services.routings.examples.DummyRouter;
 import io.scalecube.services.routings.examples.GreetingServiceImplA;
 import io.scalecube.services.routings.examples.GreetingServiceImplB;
 import io.scalecube.services.routings.examples.WeightedRandomRouter;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import reactor.core.publisher.Mono;

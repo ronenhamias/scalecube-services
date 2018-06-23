@@ -6,6 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.scalecube.cluster.ClusterConfig;
 import io.scalecube.cluster.ClusterConfig.Builder;
+import io.scalecube.services.examples.CoarseGrainedService;
+import io.scalecube.services.examples.CoarseGrainedServiceImpl;
+import io.scalecube.services.examples.GreetingRequest;
+import io.scalecube.services.examples.GreetingResponse;
+import io.scalecube.services.examples.GreetingService;
+import io.scalecube.services.examples.GreetingServiceImpl;
 import io.scalecube.services.exceptions.InternalServiceException;
 
 import org.junit.jupiter.api.AfterAll;

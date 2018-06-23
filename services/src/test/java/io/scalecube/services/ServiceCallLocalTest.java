@@ -16,6 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import io.scalecube.services.api.ServiceMessage;
+import io.scalecube.services.examples.GreetingResponse;
+import io.scalecube.services.examples.GreetingServiceImpl;
 import io.scalecube.services.exceptions.ServiceException;
 import io.scalecube.services.routing.RoundRobinServiceRouter;
 

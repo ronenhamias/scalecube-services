@@ -17,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.scalecube.services.api.ServiceMessage;
+import io.scalecube.services.examples.GreetingResponse;
+import io.scalecube.services.examples.GreetingServiceImpl;
 import io.scalecube.services.exceptions.ServiceException;
 
 import org.junit.jupiter.api.AfterAll;
