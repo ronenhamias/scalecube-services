@@ -34,7 +34,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public class RoutersTest extends BaseTest {
-  public static final int TIMEOUT = 3;
+  public static final int TIMEOUT = 10;
   private Duration timeout = Duration.ofSeconds(TIMEOUT);
 
   private Microservices gateway;
