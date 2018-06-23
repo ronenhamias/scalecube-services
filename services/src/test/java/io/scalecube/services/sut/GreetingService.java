@@ -9,8 +9,10 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-@Service
+@Service(GreetingService.SERVICE_NAME)
 public interface GreetingService {
+
+  String SERVICE_NAME = "greetings";
 
   @ServiceMethod
   void notifyGreeting();
