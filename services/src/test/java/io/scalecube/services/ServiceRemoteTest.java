@@ -3,23 +3,13 @@ package io.scalecube.services;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import io.scalecube.cluster.ClusterConfig;
 import io.scalecube.cluster.ClusterConfig.Builder;
-import io.scalecube.cluster.membership.MembershipEvent;
-import io.scalecube.services.a.b.testing.CanaryService;
-import io.scalecube.services.a.b.testing.CanaryTestingRouter;
-import io.scalecube.services.a.b.testing.GreetingServiceImplA;
-import io.scalecube.services.a.b.testing.GreetingServiceImplB;
 import io.scalecube.services.exceptions.InternalServiceException;
-import io.scalecube.services.routing.RoundRobinServiceRouter;
-import io.scalecube.services.routing.Routers;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 
@@ -29,14 +19,9 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class ServiceRemoteTest extends BaseTest {
 

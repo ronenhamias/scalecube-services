@@ -1,4 +1,4 @@
-package io.scalecube.services.a.b.testing;
+package io.scalecube.services.routings.examples;
 
 import io.scalecube.services.GreetingRequest;
 import io.scalecube.services.GreetingResponse;

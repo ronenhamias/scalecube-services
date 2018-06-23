@@ -9,18 +9,15 @@ import static io.scalecube.services.TestRequests.GREETING_REQUEST_REQ;
 import static io.scalecube.services.TestRequests.GREETING_REQUEST_TIMEOUT_REQ;
 import static io.scalecube.services.TestRequests.GREETING_THROWING_VOID_REQ;
 import static io.scalecube.services.TestRequests.GREETING_VOID_REQ;
-import static io.scalecube.services.TestRequests.NOT_FOUND_REQ;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import io.scalecube.services.api.ServiceMessage;
 import io.scalecube.services.exceptions.ServiceException;
-import io.scalecube.services.routing.RoundRobinServiceRouter;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
