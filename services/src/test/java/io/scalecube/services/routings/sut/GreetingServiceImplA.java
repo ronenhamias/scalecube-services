@@ -1,7 +1,7 @@
-package io.scalecube.services.routings.examples;
+package io.scalecube.services.routings.sut;
 
-import io.scalecube.services.examples.GreetingRequest;
-import io.scalecube.services.examples.GreetingResponse;
+import io.scalecube.services.sut.GreetingRequest;
+import io.scalecube.services.sut.GreetingResponse;
 
 import reactor.core.publisher.Mono;
 

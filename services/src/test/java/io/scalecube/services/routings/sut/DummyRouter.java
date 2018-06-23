@@ -1,4 +1,4 @@
-package io.scalecube.services.routings.examples;
+package io.scalecube.services.routings.sut;
 
 import static com.google.common.base.Preconditions.checkArgument;
 

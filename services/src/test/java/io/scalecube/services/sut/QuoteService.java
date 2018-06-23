@@ -1,4 +1,4 @@
-package io.scalecube.services.streaming;
+package io.scalecube.services.sut;
 
 import io.scalecube.services.annotations.Service;
 import io.scalecube.services.annotations.ServiceMethod;

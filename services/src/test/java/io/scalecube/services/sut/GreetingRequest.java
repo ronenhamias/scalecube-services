@@ -1,4 +1,4 @@
-package io.scalecube.services.examples;
+package io.scalecube.services.sut;
 
 import java.time.Duration;
 

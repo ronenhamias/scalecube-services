@@ -4,10 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.scalecube.services.examples.GreetingRequest;
-import io.scalecube.services.examples.GreetingResponse;
-import io.scalecube.services.examples.GreetingService;
-import io.scalecube.services.examples.GreetingServiceImpl;
+import io.scalecube.services.sut.GreetingRequest;
+import io.scalecube.services.sut.GreetingResponse;
+import io.scalecube.services.sut.GreetingService;
+import io.scalecube.services.sut.GreetingServiceImpl;
 
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;

@@ -1,4 +1,4 @@
-package io.scalecube.services.routings.examples;
+package io.scalecube.services.routings.sut;
 
 import io.scalecube.services.ServiceReference;
 import io.scalecube.services.api.ServiceMessage;

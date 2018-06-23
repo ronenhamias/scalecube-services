@@ -1,11 +1,11 @@
 package io.scalecube.services.routings;
 
 import io.scalecube.services.Microservices;
-import io.scalecube.services.examples.GreetingRequest;
-import io.scalecube.services.routings.examples.CanaryService;
-import io.scalecube.services.routings.examples.GreetingServiceImplA;
-import io.scalecube.services.routings.examples.GreetingServiceImplB;
-import io.scalecube.services.routings.examples.WeightedRandomRouter;
+import io.scalecube.services.routings.sut.CanaryService;
+import io.scalecube.services.routings.sut.GreetingServiceImplA;
+import io.scalecube.services.routings.sut.GreetingServiceImplB;
+import io.scalecube.services.routings.sut.WeightedRandomRouter;
+import io.scalecube.services.sut.GreetingRequest;
 
 import reactor.core.publisher.Mono;
 

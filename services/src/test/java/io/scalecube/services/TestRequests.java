@@ -1,7 +1,7 @@
 package io.scalecube.services;
 
 import io.scalecube.services.api.ServiceMessage;
-import io.scalecube.services.examples.GreetingRequest;
+import io.scalecube.services.sut.GreetingRequest;
 
 import java.time.Duration;
 
