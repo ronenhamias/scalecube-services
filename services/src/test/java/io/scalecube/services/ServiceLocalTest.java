@@ -17,9 +17,9 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class LocalServiceTest extends BaseTest {
+public class ServiceLocalTest extends BaseTest {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(LocalServiceTest.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(ServiceLocalTest.class);
 
   private static final Duration timeout = Duration.ofSeconds(3);
 

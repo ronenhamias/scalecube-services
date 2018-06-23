@@ -6,7 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
+import io.scalecube.cluster.membership.MembershipEvent;
 import io.scalecube.services.ServiceCall.Call;
 import io.scalecube.services.a.b.testing.CanaryService;
 import io.scalecube.services.a.b.testing.CanaryTestingRouter;
@@ -14,6 +16,7 @@ import io.scalecube.services.a.b.testing.GreetingServiceImplA;
 import io.scalecube.services.a.b.testing.GreetingServiceImplB;
 import io.scalecube.services.api.ServiceMessage;
 import io.scalecube.services.routing.RandomServiceRouter;
+import io.scalecube.services.routing.RoundRobinServiceRouter;
 import io.scalecube.services.routing.Routers;
 
 import org.junit.jupiter.api.AfterEach;
@@ -21,9 +24,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public class RoutersTest extends BaseTest {
@@ -78,7 +85,84 @@ public class RoutersTest extends BaseTest {
     provider2.shutdown().block();
     provider1.shutdown().block();
   }
+  
+  @Test
+  public void test_remote_round_robin_selection_logic() throws InterruptedException {
+    int numberOfProviders = 3;
+    int attempts = 100;
+    List<Microservices> providers = new ArrayList<>(numberOfProviders);
+    CountDownLatch allProvidersJoined = new CountDownLatch(numberOfProviders);
 
+    Microservices gateway = Microservices.builder().startAwait();
+
+    gateway.cluster().listenMembership()
+        .filter(MembershipEvent::isAdded)
+        .distinct(event -> event.member().id())
+        .subscribe(event -> allProvidersJoined.countDown());
+
+    for (int i = 0; i < numberOfProviders; i++) {
+      providers.add(Microservices.builder()
+          .seeds(gateway.cluster().address())
+          .services(new GreetingServiceImpl(i))
+          .startAwait());
+    }
+
+    if (!allProvidersJoined.await(3, TimeUnit.SECONDS)) {
+      fail("Providers have still joined yet");
+    }
+
+    GreetingService service = gateway.call().router(RoundRobinServiceRouter.class).create().api(GreetingService.class);
+
+    for (int i = 0; i < attempts; i++) {
+      Long numberOfUniqueProviders = Flux.range(0, numberOfProviders)
+          .flatMap(j -> Mono.from(service.greetingRequest(new GreetingRequest("joe" + j)))
+              .map(GreetingResponse::sender))
+          .distinct()
+          .count()
+          .block(timeout);
+      assertEquals(numberOfProviders, numberOfUniqueProviders.intValue(), "attempt #" + i);
+    }
+
+    providers.forEach(provider -> provider.shutdown().block(timeout));
+    gateway.shutdown().block(timeout);
+  }
+
+  
+  @Test
+  public void test_remote_service_tags() {
+    Microservices services1 = Microservices.builder()
+        .seeds(gateway.cluster().address())
+        .service(new GreetingServiceImplA()).tag("Weight", "0.3").register()
+        .startAwait();
+
+    Microservices services2 = Microservices.builder()
+        .seeds(gateway.cluster().address())
+        .service(new GreetingServiceImplB()).tag("Weight", "0.7").register()
+        .startAwait();
+
+    CanaryService service = gateway.call()
+        .router(Routers.getRouter(CanaryTestingRouter.class))
+        .create()
+        .api(CanaryService.class);
+
+    Util.sleep(1000);
+
+    AtomicInteger serviceBCount = new AtomicInteger(0);
+
+    int n = (int) 1e2;
+    for (int i = 0; i < n; i++) {
+      GreetingResponse success = service.greeting(new GreetingRequest("joe")).block(Duration.ofSeconds(3));
+      if (success.getResult().contains("SERVICE_B_TALKING")) {
+        serviceBCount.incrementAndGet();
+      }
+    }
+
+    assertEquals(0.6d, serviceBCount.doubleValue() / n, 0.2d);
+
+    services2.shutdown().block();
+    services1.shutdown().block();
+  }
+  
   @Test
   public void test_tag_selection_logic() {
 
@@ -140,6 +224,8 @@ public class RoutersTest extends BaseTest {
     provider1.shutdown().block();
   }
 
+ 
+  
   @Test
   public void test_service_tags() throws Exception {
     Microservices services1 = Microservices.builder()
