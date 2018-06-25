@@ -15,7 +15,7 @@ import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.function.BiFunction;
 
@@ -75,7 +75,7 @@ public final class ServiceMessageCodec {
         builder.headers(headersCodec.decode(stream));
       } catch (Throwable ex) {
         LOGGER.error("Failed to decode message headers: {}, cause: {}",
-            headersBuffer.toString(Charset.defaultCharset()), ex);
+            headersBuffer.toString(StandardCharsets.UTF_8), ex);
         throw new MessageCodecException("Failed to decode message headers", ex);
       } finally {
         ReferenceCountUtil.release(headersBuffer);
@@ -99,7 +99,7 @@ public final class ServiceMessageCodec {
       data = dataCodec.decode(inputStream, targetType);
     } catch (Throwable ex) {
       LOGGER.error("Failed to decode data on: {}, cause: {}, data buffer: {}",
-          message, ex, dataBuffer.toString(Charset.defaultCharset()));
+          message, ex, dataBuffer.toString(StandardCharsets.UTF_8));
       throw new MessageCodecException("Failed to decode data on message q=" + message.qualifier(), ex);
     } finally {
       ReferenceCountUtil.release(dataBuffer);
