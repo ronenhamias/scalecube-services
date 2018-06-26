@@ -39,7 +39,8 @@ public class PriceLevel {
     return order;
   }
 
-  public long match(long orderId, Side side, long quantity, EmitterProcessor<MatchOrder> matchEmmiter) {
+  public long match(long orderId, Side side, long size, EmitterProcessor<MatchOrder> matchEmmiter) {
+    long quantity = size;
     while (quantity > 0 && !orders.isEmpty()) {
       Order order = orders.get(0);
       long orderQuantity = order.size();

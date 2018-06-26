@@ -23,11 +23,13 @@ public class DefaultMarketDataService implements MarketDataService {
   Map<Long, OrderBook> view = new ConcurrentHashMap<>();
   Market market = new Market(new MarketListener() {
     @Override
-    public void update(OrderBook book, boolean bbo) {}
+    public void update(OrderBook book, boolean bbo) {
+      System.out.println(book);
+    }
 
     @Override
     public void trade(OrderBook book, Side side, long price, long size) {
-
+      System.out.println(book);
     }
   });
 

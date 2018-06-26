@@ -179,6 +179,8 @@ public class OrderBook {
       case SELL:
         asks.remove(level.price());
         break;
+      default:
+        // noop;
     }
   }
 
