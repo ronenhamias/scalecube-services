@@ -33,7 +33,7 @@ public class Example2 {
 
         // Create a proxy to the seed service node
         Call service = seed.call();
-        final String SERVICE_QUALIFIER = "io.scalecube.Greetings/sayHello";
+        final String SERVICE_QUALIFIER = "/io.scalecube.Greetings/sayHello";
 
         // Create a ServiceMessage request with service qualifier and data
         ServiceMessage request = ServiceMessage.builder()
