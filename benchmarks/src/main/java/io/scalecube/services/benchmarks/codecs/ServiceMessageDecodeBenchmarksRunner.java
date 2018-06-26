@@ -1,4 +1,4 @@
-package io.scalecube.services.benchmarks;
+package io.scalecube.services.benchmarks.codecs;
 
 import io.scalecube.benchmarks.BenchmarksSettings;
 import io.scalecube.services.api.ServiceMessage;
@@ -6,10 +6,11 @@ import io.scalecube.services.codec.ServiceMessageCodec;
 
 import com.codahale.metrics.Timer;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.util.ReferenceCountUtil;
 import io.rsocket.Payload;
-import io.rsocket.util.ByteBufPayload;
 
-public class EncodeServiceMessageCodecBenchmarksRunner {
+public class ServiceMessageDecodeBenchmarksRunner {
 
   public static void main(String[] args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args).build();
@@ -17,14 +18,16 @@ public class EncodeServiceMessageCodecBenchmarksRunner {
 
       Timer timer = state.timer("timer");
       ServiceMessageCodec codec = state.codec();
-      ServiceMessage message = state.message();
+      Payload payloadMessage = state.payload();
 
       return i -> {
         Timer.Context timeContext = timer.time();
-        Payload payload = codec.encodeAndTransform(message, ByteBufPayload::create);
-        payload.release();
+        ByteBuf dataBuffer = payloadMessage.sliceData().retain();
+        ByteBuf headersBuffer = payloadMessage.sliceMetadata().retain();
+        ServiceMessage message = codec.decode(dataBuffer, headersBuffer);
+        ReferenceCountUtil.release(message.data());
         timeContext.stop();
-        return payload;
+        return message;
       };
     });
   }

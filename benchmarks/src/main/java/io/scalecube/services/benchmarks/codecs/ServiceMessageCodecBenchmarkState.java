@@ -1,4 +1,4 @@
-package io.scalecube.services.benchmarks;
+package io.scalecube.services.benchmarks.codecs;
 
 import io.scalecube.benchmarks.BenchmarksSettings;
 import io.scalecube.benchmarks.BenchmarksState;
@@ -46,7 +46,7 @@ public class ServiceMessageCodecBenchmarkState extends BenchmarksState<ServiceMe
     return serviceMessageCodec;
   }
 
-  public Payload payloadMessage() {
+  public Payload payload() {
     return payloadMessage;
   }
 
