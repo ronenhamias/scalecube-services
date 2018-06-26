@@ -4,16 +4,15 @@ import io.scalecube.examples.orderbook.service.api.MarketDataService;
 import io.scalecube.examples.orderbook.service.engine.OrderBooks;
 import io.scalecube.examples.orderbook.service.engine.events.Side;
 
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 
 public class DefaultMarketDataService implements MarketDataService {

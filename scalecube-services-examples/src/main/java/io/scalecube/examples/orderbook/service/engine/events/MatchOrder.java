@@ -9,7 +9,7 @@ public class MatchOrder {
   long remainingQuantity;
 
   public MatchOrder() {}
-  
+
   public MatchOrder(long restingOrderId,
       long incomingOrderId,
       Side incomingSide,

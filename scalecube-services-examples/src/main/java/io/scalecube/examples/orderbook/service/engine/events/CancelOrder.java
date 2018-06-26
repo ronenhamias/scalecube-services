@@ -2,11 +2,11 @@ package io.scalecube.examples.orderbook.service.engine.events;
 
 public class CancelOrder {
 
-  Long orderId,  remainingQuantity, size;
-  
+  Long orderId, remainingQuantity, size;
+
   public CancelOrder() {};
-  
-  public CancelOrder(Long orderId, Long  remainingQuantity, Long size) {
+
+  public CancelOrder(Long orderId, Long remainingQuantity, Long size) {
     this.orderId = orderId;
     this.remainingQuantity = remainingQuantity;
     this.size = size;
