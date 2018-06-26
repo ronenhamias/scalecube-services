@@ -10,10 +10,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCountUtil;
 import io.rsocket.Payload;
 
+import java.util.concurrent.TimeUnit;
+
 public class ServiceMessageDecodeBenchmarksRunner {
 
   public static void main(String[] args) {
-    BenchmarksSettings settings = BenchmarksSettings.from(args).build();
+    BenchmarksSettings settings = BenchmarksSettings.from(args).durationUnit(TimeUnit.NANOSECONDS).build();
     new ServiceMessageCodecBenchmarkState(settings).runForSync(state -> {
 
       Timer timer = state.timer("timer");

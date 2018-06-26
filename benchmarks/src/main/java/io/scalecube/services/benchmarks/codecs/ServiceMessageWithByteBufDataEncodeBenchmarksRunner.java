@@ -11,7 +11,7 @@ import io.rsocket.util.ByteBufPayload;
 
 import java.util.concurrent.TimeUnit;
 
-public class ServiceMessageEncodeBenchmarksRunner {
+public class ServiceMessageWithByteBufDataEncodeBenchmarksRunner {
 
   public static void main(String[] args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args).durationUnit(TimeUnit.NANOSECONDS).build();
@@ -19,7 +19,7 @@ public class ServiceMessageEncodeBenchmarksRunner {
 
       Timer timer = state.timer("timer");
       ServiceMessageCodec codec = state.codec();
-      ServiceMessage message = state.message();
+      ServiceMessage message = state.messageWithByteBuf();
 
       return i -> {
         Timer.Context timeContext = timer.time();

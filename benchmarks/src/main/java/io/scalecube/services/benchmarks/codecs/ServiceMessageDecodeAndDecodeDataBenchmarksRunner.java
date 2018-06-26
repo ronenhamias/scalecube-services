@@ -6,12 +6,12 @@ import io.scalecube.services.codec.ServiceMessageCodec;
 
 import com.codahale.metrics.Timer;
 
+import io.netty.buffer.ByteBuf;
 import io.rsocket.Payload;
-import io.rsocket.util.ByteBufPayload;
 
 import java.util.concurrent.TimeUnit;
 
-public class ServiceMessageEncodeBenchmarksRunner {
+public class ServiceMessageDecodeAndDecodeDataBenchmarksRunner {
 
   public static void main(String[] args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args).durationUnit(TimeUnit.NANOSECONDS).build();
@@ -19,14 +19,16 @@ public class ServiceMessageEncodeBenchmarksRunner {
 
       Timer timer = state.timer("timer");
       ServiceMessageCodec codec = state.codec();
-      ServiceMessage message = state.message();
+      Payload payloadMessage = state.payload();
+      Class<?> dataType = state.dataType();
 
       return i -> {
         Timer.Context timeContext = timer.time();
-        Payload payload = codec.encodeAndTransform(message, ByteBufPayload::create);
-        payload.release();
+        ByteBuf dataBuffer = payloadMessage.sliceData().retain();
+        ByteBuf headersBuffer = payloadMessage.sliceMetadata().retain();
+        ServiceMessage message = ServiceMessageCodec.decodeData(codec.decode(dataBuffer, headersBuffer), dataType);
         timeContext.stop();
-        return payload;
+        return message;
       };
     });
   }

@@ -50,8 +50,18 @@ public class ServiceMessageCodecBenchmarkState extends BenchmarksState<ServiceMe
     return payloadMessage;
   }
 
+  public Class<?> dataType() {
+    return PlaceOrderRequest.class;
+  }
+
   public ServiceMessage message() {
     return serviceMessage;
+  }
+
+  public ServiceMessage messageWithByteBuf() {
+    return ServiceMessage.from(serviceMessage)
+        .data(payloadMessage.sliceData())
+        .build();
   }
 
   private PlaceOrderRequest generateData() {
