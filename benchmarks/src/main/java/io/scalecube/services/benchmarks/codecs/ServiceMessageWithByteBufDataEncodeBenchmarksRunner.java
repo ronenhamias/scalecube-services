@@ -6,8 +6,7 @@ import io.scalecube.services.codec.ServiceMessageCodec;
 
 import com.codahale.metrics.Timer;
 
-import io.rsocket.Payload;
-import io.rsocket.util.ByteBufPayload;
+import io.netty.util.ReferenceCountUtil;
 
 import java.util.concurrent.TimeUnit;
 
@@ -23,10 +22,12 @@ public class ServiceMessageWithByteBufDataEncodeBenchmarksRunner {
 
       return i -> {
         Timer.Context timeContext = timer.time();
-        Payload payload = codec.encodeAndTransform(message, ByteBufPayload::create);
-        payload.release();
+        Object result = codec.encodeAndTransform(message, (dataByteBuf, headersByteBuf) -> {
+          ReferenceCountUtil.release(headersByteBuf);
+          return dataByteBuf;
+        });
         timeContext.stop();
-        return payload;
+        return result;
       };
     });
   }
