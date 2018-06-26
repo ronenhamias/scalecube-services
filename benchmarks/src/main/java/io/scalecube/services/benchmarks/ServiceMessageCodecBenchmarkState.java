@@ -81,15 +81,15 @@ public class ServiceMessageCodecBenchmarkState extends BenchmarksState<ServiceMe
 
   private Payload generatePayload(ServiceMessage msg) {
     try {
-      String rawData = objectMapper.writeValueAsString(msg.data());
-      System.out.println("generated dataBuffer: " + rawData);
+      String data = objectMapper.writeValueAsString(msg.data());
+      System.out.println("generated dataBuffer: " + data);
       ByteBuf dataBuffer = ByteBufAllocator.DEFAULT.buffer();
-      dataBuffer.writeBytes(rawData.getBytes());
+      dataBuffer.writeBytes(data.getBytes());
 
-      String rawHeaders = objectMapper.writeValueAsString(msg.headers());
-      System.out.println("generated dataBuffer: " + rawHeaders);
+      String headers = objectMapper.writeValueAsString(msg.headers());
+      System.out.println("generated headersBuffer: " + headers);
       ByteBuf headersBuffer = ByteBufAllocator.DEFAULT.buffer();
-      headersBuffer.writeBytes(rawHeaders.getBytes());
+      headersBuffer.writeBytes(headers.getBytes());
 
       return ByteBufPayload.create(dataBuffer, headersBuffer);
     } catch (Throwable t) {
