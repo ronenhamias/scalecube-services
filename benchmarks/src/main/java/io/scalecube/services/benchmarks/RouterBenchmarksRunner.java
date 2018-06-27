@@ -19,7 +19,7 @@ public class RouterBenchmarksRunner {
       .qualifier(Qualifier.asString(NAMESPACE, ACTION))
       .build();
 
-  public static void main(String[] args) {
+  public static void main(String ... args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args).durationUnit(TimeUnit.NANOSECONDS).build();
     new RouterBenchmarksState(settings).runForSync(state -> {
 

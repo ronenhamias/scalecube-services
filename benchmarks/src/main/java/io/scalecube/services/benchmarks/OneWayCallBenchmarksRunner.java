@@ -9,7 +9,7 @@ import com.codahale.metrics.Timer;
 
 public class OneWayCallBenchmarksRunner {
 
-  public static void main(String[] args) {
+  public static void main(String ... args) {
     BenchmarksSettings settings = BenchmarksSettings.from(args).build();
     new ServicesBenchmarksState(settings, new BenchmarkServiceImpl()).runForAsync(state -> {
 
