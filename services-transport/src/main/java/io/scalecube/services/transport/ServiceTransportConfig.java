@@ -8,8 +8,8 @@ public class ServiceTransportConfig {
   private final ExecutorService serverEventLoopGroup;
 
   private ServiceTransportConfig(Builder builder) {
-    this.clientEventLoopGroup = builder.clientEventLoopGroup;
-    this.serverEventLoopGroup = builder.serverEventLoopGroup;
+    this.clientEventLoopGroup = builder.clientExecutorService;
+    this.serverEventLoopGroup = builder.serverExecutorService;
   }
 
   public ExecutorService clientEventLoopGroup() {
@@ -25,18 +25,18 @@ public class ServiceTransportConfig {
   }
 
   public static class Builder {
-    ExecutorService clientEventLoopGroup;
-    ExecutorService serverEventLoopGroup;
+    ExecutorService clientExecutorService;
+    ExecutorService serverExecutorService;
 
     private Builder() {}
 
-    public Builder clientEventLoopGroup(ExecutorService clientEventLoopGroup) {
-      this.clientEventLoopGroup = clientEventLoopGroup;
+    public Builder clientExecutorService(ExecutorService clientExecutorService) {
+      this.clientExecutorService = clientExecutorService;
       return this;
     }
 
-    public Builder serverEventLoopGroup(ExecutorService serverEventLoopGroup) {
-      this.serverEventLoopGroup = serverEventLoopGroup;
+    public Builder serverExecutorService(ExecutorService serverExecutorService) {
+      this.serverExecutorService = serverExecutorService;
       return this;
     }
 

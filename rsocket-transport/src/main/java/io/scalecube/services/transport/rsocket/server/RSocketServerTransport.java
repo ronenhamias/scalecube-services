@@ -27,16 +27,16 @@ public class RSocketServerTransport implements ServerTransport {
   private static final Logger LOGGER = LoggerFactory.getLogger(RSocketServerTransport.class);
 
   private final ServiceMessageCodec codec;
-  private final Optional<EventLoopGroup> customEventLoopGroup;
+  private final EventLoopGroup customEventLoopGroup;
 
   private NettyContextCloseable server;
   private List<NettyContext> channels = new CopyOnWriteArrayList<>();
 
   public RSocketServerTransport(ServiceMessageCodec codec) {
-    this(codec, Optional.empty());
+    this(codec, null);
   }
 
-  public RSocketServerTransport(ServiceMessageCodec codec, Optional<EventLoopGroup> customEventLoopGroup) {
+  public RSocketServerTransport(ServiceMessageCodec codec, EventLoopGroup customEventLoopGroup) {
     this.codec = codec;
     this.customEventLoopGroup = customEventLoopGroup;
   }
@@ -55,7 +55,7 @@ public class RSocketServerTransport implements ServerTransport {
                 });
                 channels.add(nettyContext);
               });
-          customEventLoopGroup.ifPresent(options::eventLoopGroup);
+          Optional.ofNullable(customEventLoopGroup).ifPresent(options::eventLoopGroup);
         });
 
     this.server = RSocketFactory.receive()

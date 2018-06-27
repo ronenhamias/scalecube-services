@@ -1,6 +1,5 @@
 package io.scalecube.services.transport.rsocket;
 
-import io.netty.channel.EventLoopGroup;
 import io.scalecube.services.codec.HeadersCodec;
 import io.scalecube.services.codec.ServiceMessageCodec;
 import io.scalecube.services.transport.ServiceTransport;
@@ -10,7 +9,7 @@ import io.scalecube.services.transport.rsocket.client.RSocketClientTransport;
 import io.scalecube.services.transport.rsocket.server.RSocketServerTransport;
 import io.scalecube.services.transport.server.api.ServerTransport;
 
-import java.util.Optional;
+import io.netty.channel.EventLoopGroup;
 
 public class RSocketServiceTransport implements ServiceTransport {
 
@@ -28,15 +27,12 @@ public class RSocketServiceTransport implements ServiceTransport {
   @Override
   public ClientTransport getClientTransport() {
     HeadersCodec headersCodec = HeadersCodec.getInstance(DEFAULT_HEADERS_FORMAT);
-    return new RSocketClientTransport(new ServiceMessageCodec(headersCodec), Optional.ofNullable(customClientEventLoopGroup));
+    return new RSocketClientTransport(new ServiceMessageCodec(headersCodec), customClientEventLoopGroup);
   }
 
   @Override
   public ServerTransport getServerTransport() {
     HeadersCodec headersCodec = HeadersCodec.getInstance(DEFAULT_HEADERS_FORMAT);
-    return new RSocketServerTransport(new ServiceMessageCodec(headersCodec), Optional.ofNullable(customServerEventLoopGroup));
+    return new RSocketServerTransport(new ServiceMessageCodec(headersCodec), customServerEventLoopGroup);
   }
-
-
-
 }

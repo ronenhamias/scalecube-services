@@ -23,17 +23,17 @@ import reactor.ipc.netty.tcp.TcpClient;
 public class RSocketClientTransport implements ClientTransport {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RSocketClientTransport.class);
-  private final Optional<EventLoopGroup> customEventLoopGroup;
+  private final EventLoopGroup customEventLoopGroup;
 
   private final Map<Address, Mono<RSocket>> rSockets = new ConcurrentHashMap<>();
 
   private final ServiceMessageCodec codec;
 
   public RSocketClientTransport(ServiceMessageCodec codec) {
-    this(codec, Optional.empty());
+    this(codec, null);
   }
 
-  public RSocketClientTransport(ServiceMessageCodec codec, Optional<EventLoopGroup> clientEventLoopGroup) {
+  public RSocketClientTransport(ServiceMessageCodec codec, EventLoopGroup clientEventLoopGroup) {
     this.codec = codec;
     this.customEventLoopGroup = clientEventLoopGroup;
   }
@@ -41,17 +41,19 @@ public class RSocketClientTransport implements ClientTransport {
   @Override
   public ClientChannel create(Address address) {
     final Map<Address, Mono<RSocket>> monoMap = rSockets; // keep reference for threadsafety
-    Mono<RSocket> rSocket = monoMap.computeIfAbsent(address, address1 -> connect(address1, monoMap, customEventLoopGroup));
+    Mono<RSocket> rSocket = monoMap.computeIfAbsent(address,
+        address1 -> connect(address1, monoMap, customEventLoopGroup));
     return new RSocketServiceClientAdapter(rSocket, codec);
   }
 
-  private static Mono<RSocket> connect(Address address, Map<Address, Mono<RSocket>> monoMap, Optional<EventLoopGroup> elg) {
+  private static Mono<RSocket> connect(Address address, Map<Address, Mono<RSocket>> monoMap,
+      EventLoopGroup elg) {
     TcpClient tcpClient =
         TcpClient.create(options -> {
           options.disablePool()
               .host(address.host())
               .port(address.port());
-          elg.ifPresent(options::eventLoopGroup);
+          Optional.ofNullable(elg).ifPresent(options::eventLoopGroup);
         });
 
     TcpClientTransport tcpClientTransport =
