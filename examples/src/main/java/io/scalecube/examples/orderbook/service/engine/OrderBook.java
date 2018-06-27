@@ -5,14 +5,13 @@ import io.scalecube.examples.orderbook.service.engine.events.CancelOrder;
 import io.scalecube.examples.orderbook.service.engine.events.MatchOrder;
 import io.scalecube.examples.orderbook.service.engine.events.Side;
 
-import reactor.core.publisher.EmitterProcessor;
-import reactor.core.publisher.Flux;
-
 import java.util.Set;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.longs.LongComparators;
+import reactor.core.publisher.EmitterProcessor;
+import reactor.core.publisher.Flux;
 
 /**
  * An order book.

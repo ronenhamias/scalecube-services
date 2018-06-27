@@ -3,9 +3,9 @@ package io.scalecube.examples.orderbook.service.engine;
 import io.scalecube.examples.orderbook.service.engine.events.MatchOrder;
 import io.scalecube.examples.orderbook.service.engine.events.Side;
 
-import reactor.core.publisher.EmitterProcessor;
-
 import java.util.ArrayList;
+
+import reactor.core.publisher.EmitterProcessor;
 
 public class PriceLevel {
 

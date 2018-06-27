@@ -3,13 +3,12 @@ package io.scalecube.examples.orderbook.service.engine;
 import io.scalecube.examples.orderbook.service.engine.events.AddOrder;
 import io.scalecube.examples.orderbook.service.engine.events.MatchOrder;
 
-import reactor.core.publisher.Flux;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import reactor.core.publisher.Flux;
 
 public class OrderBooks {
 
