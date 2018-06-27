@@ -76,7 +76,7 @@ public class RSocketServiceAcceptor implements SocketAcceptor {
       private Payload copy(Payload payload) {
         ByteBuf data = payload.sliceData().copy();
         ByteBuf metadata = payload.sliceMetadata().copy();
-        payload.release();
+        // payload.release();
         return ByteBufPayload.create(data, metadata);
       }
 

@@ -20,7 +20,7 @@ public class RequestManyBenchmarksRunner {
 
       return i -> {
         Timer.Context timeContext = timer.time();
-        return benchmarkService.requestMany(responseCount)
+        return benchmarkService.requestMany()
             .doOnNext(onNext -> meter.mark())
             .doFinally(next -> timeContext.stop());
       };

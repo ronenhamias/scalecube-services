@@ -55,7 +55,7 @@ public class RSocketServiceClientAdapter implements ClientChannel {
   private ServiceMessage toMessage(Payload payload) {
     ByteBuf dataBuffer = payload.sliceData().copy();
     ByteBuf headersBuffer = payload.sliceMetadata().copy();
-    payload.release();
+    // payload.release();
     return messageCodec.decode(dataBuffer, headersBuffer);
   }
 
