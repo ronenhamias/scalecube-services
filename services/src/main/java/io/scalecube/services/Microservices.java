@@ -15,6 +15,7 @@ import io.scalecube.services.metrics.Metrics;
 import io.scalecube.services.registry.ServiceRegistryImpl;
 import io.scalecube.services.registry.api.ServiceRegistry;
 import io.scalecube.services.transport.ServiceTransport;
+import io.scalecube.services.transport.ServiceTransportConfig;
 import io.scalecube.services.transport.client.api.ClientTransport;
 import io.scalecube.services.transport.server.api.ServerTransport;
 import io.scalecube.transport.Address;
@@ -108,10 +109,10 @@ public class Microservices {
 
   private final ServiceRegistry serviceRegistry;
   private final ClientTransport client;
+  private final ServerTransport server;
   private final Metrics metrics;
   private final Address serviceAddress;
   private final ServiceDiscovery discovery;
-  private final ServerTransport server;
   private final ServiceMethodRegistry methodRegistry;
   private final List<Object> services;
   private final ClusterConfig.Builder clusterConfig;
@@ -123,8 +124,8 @@ public class Microservices {
     this.id = IdGenerator.generateId();
     // provision services for service access.
     this.metrics = builder.metrics;
-    this.client = builder.client;
-    this.server = builder.server;
+    this.client = builder.transport.getClientTransport();
+    this.server = builder.transport.getServerTransport();
 
     this.services = builder.services.stream().map(mapper -> mapper.serviceInstance).collect(Collectors.toList());
     this.methodRegistry = ServiceMethodRegistryImpl.builder()
@@ -179,8 +180,7 @@ public class Microservices {
     private List<ServiceInfo> services = new ArrayList<>();
     private ClusterConfig.Builder clusterConfig = ClusterConfig.builder();
     private Metrics metrics;
-    private ServerTransport server = ServiceTransport.getTransport().getServerTransport();
-    private ClientTransport client = ServiceTransport.getTransport().getClientTransport();
+    private ServiceTransport transport = ServiceTransport.getTransport();
 
     /**
      * Microservices instance builder.
@@ -201,15 +201,8 @@ public class Microservices {
       return new Microservices(this).start().block();
     }
 
-    public Builder server(ServerTransport server) {
-      requireNonNull(server);
-      this.server = server;
-      return this;
-    }
-
-    public Builder client(ClientTransport client) {
-      requireNonNull(client);
-      this.client = client;
+    public Builder transportConfig(ServiceTransportConfig transportConfig){
+      this.transport.configure(transportConfig);
       return this;
     }
 

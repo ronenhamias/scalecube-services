@@ -5,6 +5,7 @@ import io.scalecube.services.transport.client.api.ClientChannel;
 import io.scalecube.services.transport.client.api.ClientTransport;
 import io.scalecube.transport.Address;
 
+import io.netty.channel.EventLoopGroup;
 import io.rsocket.RSocket;
 import io.rsocket.RSocketFactory;
 import io.rsocket.transport.netty.client.TcpClientTransport;
@@ -13,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import reactor.core.publisher.Mono;
@@ -21,27 +23,38 @@ import reactor.ipc.netty.tcp.TcpClient;
 public class RSocketClientTransport implements ClientTransport {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RSocketClientTransport.class);
+  private final EventLoopGroup customEventLoopGroup;
 
   private final Map<Address, Mono<RSocket>> rSockets = new ConcurrentHashMap<>();
 
   private final ServiceMessageCodec codec;
 
   public RSocketClientTransport(ServiceMessageCodec codec) {
+    this(codec, null);
+  }
+
+  public RSocketClientTransport(ServiceMessageCodec codec, EventLoopGroup clientEventLoopGroup) {
     this.codec = codec;
+    this.customEventLoopGroup = clientEventLoopGroup;
   }
 
   @Override
   public ClientChannel create(Address address) {
     final Map<Address, Mono<RSocket>> monoMap = rSockets; // keep reference for threadsafety
-    Mono<RSocket> rSocket = monoMap.computeIfAbsent(address, address1 -> connect(address1, monoMap));
+    Mono<RSocket> rSocket = monoMap.computeIfAbsent(address,
+        address1 -> connect(address1, monoMap, customEventLoopGroup));
     return new RSocketServiceClientAdapter(rSocket, codec);
   }
 
-  private static Mono<RSocket> connect(Address address, Map<Address, Mono<RSocket>> monoMap) {
+  private static Mono<RSocket> connect(Address address, Map<Address, Mono<RSocket>> monoMap,
+      EventLoopGroup elg) {
     TcpClient tcpClient =
-        TcpClient.create(options -> options.disablePool()
-            .host(address.host())
-            .port(address.port()));
+        TcpClient.create(options -> {
+          options.disablePool()
+              .host(address.host())
+              .port(address.port());
+          Optional.ofNullable(elg).ifPresent(options::eventLoopGroup);
+        });
 
     TcpClientTransport tcpClientTransport =
         TcpClientTransport.create(tcpClient);

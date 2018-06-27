@@ -6,6 +6,8 @@ import io.scalecube.services.transport.server.api.ServerTransport;
 
 public interface ServiceTransport {
 
+  void configure(ServiceTransportConfig config);
+
   ClientTransport getClientTransport();
 
   ServerTransport getServerTransport();

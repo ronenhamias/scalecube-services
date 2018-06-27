@@ -4,6 +4,7 @@ import io.scalecube.services.codec.ServiceMessageCodec;
 import io.scalecube.services.methods.ServiceMethodRegistry;
 import io.scalecube.services.transport.server.api.ServerTransport;
 
+import io.netty.channel.EventLoopGroup;
 import io.rsocket.RSocketFactory;
 import io.rsocket.transport.netty.server.NettyContextCloseable;
 import io.rsocket.transport.netty.server.TcpServerTransport;
@@ -13,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
@@ -25,27 +27,36 @@ public class RSocketServerTransport implements ServerTransport {
   private static final Logger LOGGER = LoggerFactory.getLogger(RSocketServerTransport.class);
 
   private final ServiceMessageCodec codec;
+  private final EventLoopGroup customEventLoopGroup;
 
   private NettyContextCloseable server;
   private List<NettyContext> channels = new CopyOnWriteArrayList<>();
 
   public RSocketServerTransport(ServiceMessageCodec codec) {
+    this(codec, null);
+  }
+
+  public RSocketServerTransport(ServiceMessageCodec codec, EventLoopGroup customEventLoopGroup) {
     this.codec = codec;
+    this.customEventLoopGroup = customEventLoopGroup;
   }
 
   @Override
   public InetSocketAddress bindAwait(InetSocketAddress address, ServiceMethodRegistry methodRegistry) {
     TcpServer tcpServer =
-        TcpServer.create(options -> options
-            .listenAddress(address)
-            .afterNettyContextInit(nettyContext -> {
-              LOGGER.info("Accepted connection on {}", nettyContext.channel());
-              nettyContext.onClose(() -> {
-                LOGGER.info("Connection closed on {}", nettyContext.channel());
-                channels.remove(nettyContext);
+        TcpServer.create(options -> {
+          options
+              .listenAddress(address)
+              .afterNettyContextInit(nettyContext -> {
+                LOGGER.info("Accepted connection on {}", nettyContext.channel());
+                nettyContext.onClose(() -> {
+                  LOGGER.info("Connection closed on {}", nettyContext.channel());
+                  channels.remove(nettyContext);
+                });
+                channels.add(nettyContext);
               });
-              channels.add(nettyContext);
-            }));
+          Optional.ofNullable(customEventLoopGroup).ifPresent(options::eventLoopGroup);
+        });
 
     this.server = RSocketFactory.receive()
         .acceptor(new RSocketServiceAcceptor(codec, methodRegistry))
