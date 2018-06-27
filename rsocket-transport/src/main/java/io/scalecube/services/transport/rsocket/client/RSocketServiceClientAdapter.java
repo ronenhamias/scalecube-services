@@ -5,7 +5,6 @@ import io.scalecube.services.codec.ServiceMessageCodec;
 import io.scalecube.services.exceptions.ConnectionClosedException;
 import io.scalecube.services.transport.client.api.ClientChannel;
 
-import io.netty.buffer.ByteBuf;
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
 import io.rsocket.util.ByteBufPayload;
@@ -53,10 +52,7 @@ public class RSocketServiceClientAdapter implements ClientChannel {
   }
 
   private ServiceMessage toMessage(Payload payload) {
-    ByteBuf dataBuffer = payload.sliceData().copy();
-    ByteBuf headersBuffer = payload.sliceMetadata().copy();
-    // payload.release();
-    return messageCodec.decode(dataBuffer, headersBuffer);
+    return messageCodec.decode(payload.sliceData(), payload.sliceMetadata());
   }
 
   @SuppressWarnings("unchecked")

@@ -7,7 +7,6 @@ import io.scalecube.services.exceptions.ExceptionProcessor;
 import io.scalecube.services.exceptions.ServiceUnavailableException;
 import io.scalecube.services.methods.ServiceMethodRegistry;
 
-import io.netty.buffer.ByteBuf;
 import io.rsocket.AbstractRSocket;
 import io.rsocket.ConnectionSetupPayload;
 import io.rsocket.Payload;
@@ -36,10 +35,12 @@ public class RSocketServiceAcceptor implements SocketAcceptor {
 
   @Override
   public Mono<RSocket> accept(ConnectionSetupPayload setup, RSocket socket) {
+    LOGGER.info("Accepted rSocket: {}, connectionSetup: {}", socket, setup);
+
     return Mono.just(new AbstractRSocket() {
       @Override
       public Mono<Payload> requestResponse(Payload payload) {
-        return Mono.just(copy(payload))
+        return Mono.just(payload)
             .map(this::toMessage)
             .doOnNext(this::checkMethodInvokerExist)
             .flatMap(message -> methodRegistry.getInvoker(message.qualifier())
@@ -50,7 +51,7 @@ public class RSocketServiceAcceptor implements SocketAcceptor {
 
       @Override
       public Flux<Payload> requestStream(Payload payload) {
-        return Flux.just(copy(payload))
+        return Flux.just(payload)
             .map(this::toMessage)
             .doOnNext(this::checkMethodInvokerExist)
             .flatMap(message -> methodRegistry.getInvoker(message.qualifier())
@@ -61,7 +62,7 @@ public class RSocketServiceAcceptor implements SocketAcceptor {
 
       @Override
       public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
-        return Flux.from(HeadAndTail.createFrom(Flux.from(payloads).map(this::copy).map(this::toMessage)))
+        return Flux.from(HeadAndTail.createFrom(Flux.from(payloads).map(this::toMessage)))
             .flatMap(pair -> {
               ServiceMessage message = pair.head();
               checkMethodInvokerExist(message);
@@ -71,13 +72,6 @@ public class RSocketServiceAcceptor implements SocketAcceptor {
             })
             .onErrorResume(t -> Flux.just(ExceptionProcessor.toMessage(t)))
             .map(this::toPayload);
-      }
-
-      private Payload copy(Payload payload) {
-        ByteBuf data = payload.sliceData().copy();
-        ByteBuf metadata = payload.sliceMetadata().copy();
-        // payload.release();
-        return ByteBufPayload.create(data, metadata);
       }
 
       private Payload toPayload(ServiceMessage response) {

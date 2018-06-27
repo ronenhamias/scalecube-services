@@ -32,7 +32,10 @@ public interface BenchmarkService {
   Mono<String> requestOne(String request);
 
   @ServiceMethod
-  Flux<String> requestMany();
+  Flux<String> requestMany(int count);
+
+  @ServiceMethod
+  Flux<String> requestManyNoParams();
 
   @ServiceMethod
   Flux<String> requestBidirectionalEcho(Flux<String> counts);
