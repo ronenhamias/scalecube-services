@@ -48,7 +48,7 @@ public class RSocketClientTransport implements ClientTransport {
         TcpClientTransport.create(tcpClient);
 
     Mono<RSocket> rSocketMono = RSocketFactory.connect()
-        .frameDecoder(payload -> ByteBufPayload.create(payload.sliceData().retain(), payload.sliceMetadata().retain()))
+        .frameDecoder(frame -> ByteBufPayload.create(frame.sliceData().retain(), frame.sliceMetadata().retain()))
         .transport(tcpClientTransport)
         .start();
 
