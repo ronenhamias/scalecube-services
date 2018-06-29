@@ -3,72 +3,97 @@ package io.scalecube.services;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import io.scalecube.cluster.ClusterConfig;
 import io.scalecube.cluster.ClusterConfig.Builder;
+import io.scalecube.cluster.membership.MembershipEvent;
+import io.scalecube.services.a.b.testing.CanaryService;
+import io.scalecube.services.a.b.testing.CanaryTestingRouter;
+import io.scalecube.services.a.b.testing.GreetingServiceImplA;
+import io.scalecube.services.a.b.testing.GreetingServiceImplB;
 import io.scalecube.services.exceptions.InternalServiceException;
-import io.scalecube.services.sut.CoarseGrainedService;
-import io.scalecube.services.sut.CoarseGrainedServiceImpl;
-import io.scalecube.services.sut.GreetingRequest;
-import io.scalecube.services.sut.GreetingResponse;
-import io.scalecube.services.sut.GreetingService;
-import io.scalecube.services.sut.GreetingServiceImpl;
+import io.scalecube.services.routing.RoundRobinServiceRouter;
+import io.scalecube.services.routing.Routers;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 
-import reactor.core.publisher.EmitterProcessor;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.TimeoutException;
-
-public class ServiceRemoteTest extends BaseTest {
+public class RemoteServiceTest extends BaseTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
-  private static Microservices gateway;
-  private static Microservices provider;
+  private Microservices gateway;
 
-  @BeforeAll
-  public static void setup() {
-    gateway = gateway();
-    provider = serviceProvider();
+  @BeforeEach
+  public void setup() {
+    this.gateway = gateway();
   }
 
-  @AfterAll
-  public static void tearDown() {
-    try {
-      gateway.shutdown().block();
-    } catch (Exception ex) {
-    }
+  @AfterEach
+  public void tearDown() {
+    gateway.shutdown().block();
+  }
 
-    try {
-      provider.shutdown().block();
-    } catch (Exception ex) {
-    }
-   
-  }
-  private static Microservices gateway() {
-    return Microservices.builder()
-        .startAwait();
-  }
-  private static Microservices serviceProvider() {
-    return Microservices.builder()
+  @Test
+  public void test_remote_service_tags() {
+    Microservices services1 = Microservices.builder()
         .seeds(gateway.cluster().address())
-        .services(new GreetingServiceImpl())
+        .service(new GreetingServiceImplA()).tag("Weight", "0.3").register()
         .startAwait();
+
+    Microservices services2 = Microservices.builder()
+        .seeds(gateway.cluster().address())
+        .service(new GreetingServiceImplB()).tag("Weight", "0.7").register()
+        .startAwait();
+
+    CanaryService service = gateway.call()
+        .router(Routers.getRouter(CanaryTestingRouter.class))
+        .create()
+        .api(CanaryService.class);
+
+    Util.sleep(1000);
+
+    AtomicInteger serviceBCount = new AtomicInteger(0);
+
+    int n = (int) 1e2;
+    for (int i = 0; i < n; i++) {
+      GreetingResponse success = service.greeting(new GreetingRequest("joe")).block(Duration.ofSeconds(3));
+      if (success.getResult().contains("SERVICE_B_TALKING")) {
+        serviceBCount.incrementAndGet();
+      }
+    }
+
+    assertEquals(0.6d, serviceBCount.doubleValue() / n, 0.2d);
+
+    services2.shutdown().block();
+    services1.shutdown().block();
   }
 
   @Test
   public void test_remote_greeting_request_completes_before_timeout() {
     Duration duration = Duration.ofSeconds(1);
+
+    Microservices node2 = Microservices.builder()
+        .seeds(gateway.cluster().address())
+        .services(new GreetingServiceImpl())
+        .startAwait();
 
     GreetingService service = gateway.call().create()
         .api(GreetingService.class);
@@ -77,10 +102,15 @@ public class ServiceRemoteTest extends BaseTest {
     Mono<GreetingResponse> result = Mono.from(service.greetingRequestTimeout(new GreetingRequest("joe", duration)));
     assertTrue(" hello to: joe".equals(result.block(Duration.ofSeconds(10)).getResult()));
 
+    node2.shutdown().block();
   }
 
   @Test
   public void test_remote_void_greeting() throws Exception {
+    Microservices node1 = Microservices.builder()
+        .seeds(gateway.cluster().address())
+        .services(new GreetingServiceImpl())
+        .startAwait();
 
     GreetingService service = gateway.call().create()
         .api(GreetingService.class);
@@ -92,10 +122,16 @@ public class ServiceRemoteTest extends BaseTest {
 
     Thread.sleep(1000);
 
+    node1.shutdown().block();
   }
 
   @Test
   public void test_remote_failing_void_greeting() throws Exception {
+    // Create microservices instance.
+    Microservices node1 = Microservices.builder()
+        .seeds(gateway.cluster().address())
+        .services(new GreetingServiceImpl())
+        .startAwait();
 
     GreetingService service = gateway.call().create().api(GreetingService.class);
 
@@ -104,10 +140,22 @@ public class ServiceRemoteTest extends BaseTest {
     StepVerifier.create(service.failingVoid(request))
         .expectErrorMessage(request.toString())
         .verify(Duration.ofSeconds(3));
+
+    System.out.println("test_remote_failing_void_greeting done.");
+
+    Thread.sleep(1000);
+
+    node1.shutdown().block();
   }
 
   @Test
   public void test_remote_throwing_void_greeting() throws Exception {
+    // Create microservices instance.
+    Microservices node1 = Microservices.builder()
+        .seeds(gateway.cluster().address())
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
     GreetingService service = gateway.call().create().api(GreetingService.class);
 
     GreetingRequest request = new GreetingRequest("joe");
@@ -115,54 +163,120 @@ public class ServiceRemoteTest extends BaseTest {
     StepVerifier.create(service.throwingVoid(request))
         .expectErrorMessage(request.toString())
         .verify(Duration.ofSeconds(3));
+
+    System.out.println("test_remote_throwing_void_greeting done.");
+
+    Thread.sleep(1000);
+
+    node1.shutdown().block();
   }
 
   @Test
   public void test_remote_async_greeting_return_string() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+        .seeds(provider.cluster().address())
+        .startAwait();
+
     // get a proxy to the service api.
-    GreetingService service = createProxy();
+    GreetingService service = createProxy(consumer);
 
     // call the service.
     Mono<String> future = Mono.from(service.greeting("joe"));
     assertTrue(" hello to: joe".equals(future.block(Duration.ofSeconds(3))));
+    provider.shutdown().block();
+    consumer.shutdown().block();
   }
 
   @Test
   public void test_remote_async_greeting_no_params() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+        .seeds(provider.cluster().address())
+        .startAwait();
+
     // get a proxy to the service api.
-    GreetingService service = createProxy();
+    GreetingService service = createProxy(consumer);
 
     // call the service.
     Mono<String> future = Mono.from(service.greetingNoParams());
 
     assertTrue("hello unknown".equals(future.block(Duration.ofSeconds(1))));
+
+    provider.shutdown().block();
+    consumer.shutdown().block();
   }
 
   @Test
   public void test_remote_greeting_no_params_fire_and_forget() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+        .seeds(provider.cluster().address())
+        .startAwait();
+
     // get a proxy to the service api.
-    GreetingService service = createProxy();
+    GreetingService service = createProxy(consumer);
 
     // call the service.
     service.notifyGreeting();
 
+    provider.shutdown().block();
+    consumer.shutdown().block();
   }
 
   @Test
   public void test_remote_greeting_return_GreetingResponse() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+        .seeds(provider.cluster().address())
+        .startAwait();
+
     // get a proxy to the service api.
-    GreetingService service = createProxy();
+    GreetingService service = createProxy(consumer);
 
     // call the service.
     Publisher<GreetingResponse> future = service.greetingRequest(new GreetingRequest("joe"));
 
     assertTrue(" hello to: joe".equals(Mono.from(future).block(Duration.ofSeconds(10000)).getResult()));
+
+    provider.shutdown().block();
+    consumer.shutdown().block();
   }
 
   @Test
   public void test_remote_greeting_request_timeout_expires() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+        .seeds(provider.cluster().address())
+        .startAwait();
+
     // get a proxy to the service api.
-    GreetingService service = createProxy();
+    GreetingService service = createProxy(consumer);
 
     // call the service.
     Publisher<GreetingResponse> result =
@@ -177,24 +291,97 @@ public class ServiceRemoteTest extends BaseTest {
 
   @Test
   public void test_remote_async_greeting_return_Message() {
+    // Create microservices cluster.
+    Microservices provider = Microservices.builder()
+        .services(new GreetingServiceImpl())
+        .startAwait();
+
+    // Create microservices cluster.
+    Microservices consumer = Microservices.builder()
+        .seeds(provider.cluster().address())
+        .startAwait();
+
     // get a proxy to the service api.
-    GreetingService service = createProxy();
+    GreetingService service = createProxy(consumer);
 
     // call the service.
     Publisher<GreetingResponse> future = service.greetingRequest(new GreetingRequest("joe"));
 
     assertTrue(" hello to: joe".equals(Mono.from(future).block(Duration.ofSeconds(1)).getResult()));
 
+    consumer.shutdown().block();
+    provider.shutdown().block();
+  }
+
+  @Test
+  public void test_remote_round_robin_selection_logic() throws InterruptedException {
+    int numberOfProviders = 3;
+    int attempts = 100;
+    List<Microservices> providers = new ArrayList<>(numberOfProviders);
+    CountDownLatch allProvidersJoined = new CountDownLatch(numberOfProviders);
+
+    Microservices gateway = gateway();
+
+    gateway.cluster().listenMembership()
+        .filter(MembershipEvent::isAdded)
+        .distinct(event -> event.member().id())
+        .subscribe(event -> allProvidersJoined.countDown());
+
+    for (int i = 0; i < numberOfProviders; i++) {
+      providers.add(Microservices.builder()
+          .seeds(gateway.cluster().address())
+          .services(new GreetingServiceImpl(i))
+          .startAwait());
+    }
+
+    if (!allProvidersJoined.await(TIMEOUT.getSeconds(), TimeUnit.SECONDS)) {
+      fail("Providers have still joined yet");
+    }
+
+    GreetingService service = gateway.call().router(RoundRobinServiceRouter.class).create().api(GreetingService.class);
+
+    for (int i = 0; i < attempts; i++) {
+      Long numberOfUniqueProviders = Flux.range(0, numberOfProviders)
+          .flatMap(j -> Mono.from(service.greetingRequest(new GreetingRequest("joe" + j)))
+              .map(GreetingResponse::sender))
+          .distinct()
+          .count()
+          .block(TIMEOUT);
+      assertEquals(numberOfProviders, numberOfUniqueProviders.intValue(), "attempt #" + i);
+    }
+
+    providers.forEach(provider -> provider.shutdown().block(TIMEOUT));
+    gateway.shutdown().block(TIMEOUT);
+  }
+
+  @Test
+  public void test_remote_async_greeting_return_string_service_not_found_error_case() throws Exception {
+    // Create microservices instance cluster.
+    Microservices provider1 = createProvider(gateway);
+
+    GreetingService service = createProxy(gateway);
+    try {
+      service.greeting("hello").block(Duration.ofSeconds(3));
+      fail("Expected no-reachable-member exception");
+    } catch (Exception ex) {
+      assertTrue(ex.getMessage().contains("No reachable member with such service"));
+    }
+
+    provider1.shutdown();
   }
 
   @Test
   public void test_remote_serviceA_calls_serviceB_using_setter() {
 
+    CoarseGrainedServiceImpl coarseGrained = new CoarseGrainedServiceImpl();
+
+    GreetingServiceImpl greeting = new GreetingServiceImpl();
+
     // Create microservices instance cluster.
     // noinspection unused
     Microservices provider = Microservices.builder()
         .seeds(gateway.cluster().address())
-        .services(new CoarseGrainedServiceImpl()) // add service a and b
+        .services(greeting, coarseGrained) // add service a and b
         .startAwait();
 
     // Get a proxy to the service api.
@@ -203,7 +390,6 @@ public class ServiceRemoteTest extends BaseTest {
     Publisher<String> future = service.callGreeting("joe");
 
     assertTrue(" hello to: joe".equals(Mono.from(future).block(Duration.ofSeconds(1))));
-    provider.shutdown().block();
   }
 
   @Test
@@ -211,18 +397,19 @@ public class ServiceRemoteTest extends BaseTest {
     // getting proxy from any node at any given time.
     CoarseGrainedServiceImpl another = new CoarseGrainedServiceImpl();
 
+    GreetingServiceImpl greeting = new GreetingServiceImpl();
+
     // Create microservices instance cluster.
     // noinspection unused
     Microservices provider = Microservices.builder()
         .seeds(gateway.cluster().address())
-        .services(another) // add service a and b
+        .services(greeting, another) // add service a and b
         .startAwait();
 
     // Get a proxy to the service api.
     CoarseGrainedService service = gateway.call().create().api(CoarseGrainedService.class);
     Publisher<String> future = service.callGreeting("joe");
     assertTrue(" hello to: joe".equals(Mono.from(future).block(Duration.ofSeconds(1))));
-    provider.shutdown().block();
   }
 
   @Test
@@ -230,10 +417,12 @@ public class ServiceRemoteTest extends BaseTest {
     // getting proxy from any node at any given time.
     CoarseGrainedServiceImpl another = new CoarseGrainedServiceImpl();
 
+    GreetingServiceImpl greeting = new GreetingServiceImpl();
+
     // Create microservices instance cluster.
     Microservices ms = Microservices.builder()
         .seeds(gateway.cluster().address())
-        .services(another) // add service a and b
+        .services(greeting, another) // add service a and b
         .startAwait();
 
     // Get a proxy to the service api.
@@ -251,10 +440,12 @@ public class ServiceRemoteTest extends BaseTest {
     // getting proxy from any node at any given time.
     CoarseGrainedServiceImpl another = new CoarseGrainedServiceImpl();
 
+    GreetingServiceImpl greeting = new GreetingServiceImpl();
+
     // Create microservices instance cluster.
     Microservices provider = Microservices.builder()
         .seeds(gateway.cluster().address())
-        .services(another) // add service a and b
+        .services(greeting, another) // add service a and b
         .startAwait();
 
     // Get a proxy to the service api.
@@ -264,70 +455,6 @@ public class ServiceRemoteTest extends BaseTest {
     assertEquals(response, " hello to: joe");
 
     provider.shutdown().block();
-  }
-
-  @Test
-  public void test_remote_bidi_greeting_expect_IllegalArgumentException() {
-
-    // get a proxy to the service api.
-    GreetingService service = createProxy();
-
-    // call the service. bidiThrowingGreeting
-    Flux<GreetingResponse> responses = service.bidiGreetingIllegalArgumentException(
-        Mono.just(new GreetingRequest("IllegalArgumentException")));
-
-    // call the service.
-    StepVerifier.create(responses)
-        .expectErrorMessage("IllegalArgumentException")
-        .verify(Duration.ofSeconds(3));
-
-  }
-
-  @Test
-  public void test_remote_bidi_greeting_expect_NotAuthorized() {
-
-    // get a proxy to the service api.
-    GreetingService service = createProxy();
-
-    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
-    // call the service.
-    Flux<GreetingResponse> responses = service.bidiGreetingNotAuthorized(requests);
-
-    // call the service.
-
-    requests.onNext(new GreetingRequest("joe-1"));
-    requests.onComplete();
-
-    StepVerifier.create(responses)
-        .expectErrorMessage("Not authorized")
-        .verify(Duration.ofSeconds(3));
-
-  }
-
-  @Test
-  public void test_remote_bidi_greeting_expect_GreetingResponse() {
-
-    // get a proxy to the service api.
-    GreetingService service = createProxy();
-
-    EmitterProcessor<GreetingRequest> requests = EmitterProcessor.create();
-    // call the service.
-    Flux<GreetingResponse> responses = service.bidiGreeting(requests);
-
-    // call the service.
-
-    requests.onNext(new GreetingRequest("joe-1"));
-    requests.onNext(new GreetingRequest("joe-2"));
-    requests.onNext(new GreetingRequest("joe-3"));
-    requests.onComplete();
-
-    StepVerifier.create(responses)
-        .expectNextMatches(resp -> resp.getResult().equals(" hello to: joe-1"))
-        .expectNextMatches(resp -> resp.getResult().equals(" hello to: joe-2"))
-        .expectNextMatches(resp -> resp.getResult().equals(" hello to: joe-3"))
-        .expectComplete()
-        .verify(Duration.ofSeconds(3));
-
   }
 
   @Test
@@ -343,7 +470,18 @@ public class ServiceRemoteTest extends BaseTest {
     assertTrue(ms.cluster().member().metadata().containsKey("HOSTNAME"));
   }
 
-  private GreetingService createProxy() {
-    return gateway.call().create().api(GreetingService.class); // create proxy for GreetingService API
+  private GreetingService createProxy(Microservices micro) {
+    return micro.call().create().api(GreetingService.class); // create proxy for GreetingService API
+  }
+
+  private Microservices createProvider(Microservices gateway) {
+    return Microservices.builder()
+        .seeds(gateway.cluster().address())
+        .startAwait();
+  }
+
+  private Microservices gateway() {
+    return Microservices.builder()
+        .startAwait();
   }
 }
