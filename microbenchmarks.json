@@ -1,6 +1,9 @@
 [
   {
-    "io.scalecube.services.benchmarks.services.OneWayBenchmarksRunner": {}
+    "io.scalecube.services.benchmarks.services.OneWayBenchmarksRunner": {
+      "test_param_one": "test_value_one",
+      "test_param_two": "test_value_two"
+    }
   },
   {
     "io.scalecube.services.benchmarks.services.OneWayCallBenchmarksRunner": {}
