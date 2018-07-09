@@ -40,6 +40,6 @@ public class SimpleQuoteService implements QuoteService {
 
   @Override
   public Flux<String> justManyNever() {
-    return Flux.never();
+    return Flux.just("test").mergeWith(Flux.never());
   }
 }
