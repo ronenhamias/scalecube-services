@@ -31,3 +31,5 @@ deploy:
   - "./src/main/scripts/cd/deploy.sh"
   on:
     branch: master
+
+
