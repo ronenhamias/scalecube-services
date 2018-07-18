@@ -1,6 +1,6 @@
 package io.scalecube.services.benchmarks.services;
 
-import io.scalecube.benchmarks.BenchmarksSettings;
+import io.scalecube.services.benchmarks.BenchmarksSettings;
 
 import com.codahale.metrics.Timer;
 

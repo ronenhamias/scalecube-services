@@ -1,9 +1,9 @@
 package io.scalecube.services.benchmarks.services;
 
-import io.scalecube.benchmarks.BenchmarksSettings;
-import io.scalecube.benchmarks.BenchmarksState;
 import io.scalecube.services.Microservices;
 import io.scalecube.services.ServiceCall;
+import io.scalecube.services.benchmarks.BenchmarksSettings;
+import io.scalecube.services.benchmarks.BenchmarksState;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
