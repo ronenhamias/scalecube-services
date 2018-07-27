@@ -1,11 +1,5 @@
 [
   {
-    "io.scalecube.services.benchmarks.services.OneWayBenchmarksRunner": {}
-  },
-  {
-    "io.scalecube.services.benchmarks.services.OneWayCallBenchmarksRunner": {}
-  },
-  {
     "io.scalecube.services.benchmarks.services.RequestManyBenchmarksRunner": {}
   },
   {
@@ -13,26 +7,5 @@
   },
   {
     "io.scalecube.services.benchmarks.services.RequestManyLatencyBenchmarksRunner": {}
-  },
-  {
-    "io.scalecube.services.benchmarks.services.RequestOneBenchmarksRunner": {}
-  },
-  {
-    "io.scalecube.services.benchmarks.services.RequestOneCallBenchmarksRunner": {}
-  },
-  {
-    "io.scalecube.services.benchmarks.codecs.ServiceMessageDecodeAndDecodeDataBenchmarksRunner": {}
-  },
-  {
-    "io.scalecube.services.benchmarks.codecs.ServiceMessageDecodeBenchmarksRunner": {}
-  },
-  {
-    "io.scalecube.services.benchmarks.codecs.ServiceMessageEncodeBenchmarksRunner": {}
-  },
-  {
-    "io.scalecube.services.benchmarks.codecs.ServiceMessageWithByteBufDataEncodeBenchmarksRunner": {}
-  },
-  {
-    "io.scalecube.services.benchmarks.routers.RouterBenchmarksRunner": {}
   }
 ]
