@@ -97,6 +97,7 @@
     <module>services</module>
     <module>benchmarks</module>
     <module>examples</module>
+    <module>services-discovery</module>
   </modules>
 
   <dependencyManagement>
