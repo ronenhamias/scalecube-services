@@ -1,6 +1,6 @@
 package io.scalecube.services.routing;
 
-import com.google.common.base.Throwables;
+import io.scalecube.Throwables;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
