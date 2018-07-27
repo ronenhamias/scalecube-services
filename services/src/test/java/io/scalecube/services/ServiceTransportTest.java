@@ -77,9 +77,9 @@ public class ServiceTransportTest {
         .doOnError(exceptionHolder::set)
         .subscribe());
 
-    gateway.cluster().listenMembership()
-        .filter(MembershipEvent::isRemoved)
-        .subscribe(onNext -> latch1.countDown());
+    //gateway.cluster().listenMembership()
+    //    .filter(MembershipEvent::isRemoved)
+    //    .subscribe(onNext -> latch1.countDown());
 
     // service node goes down
     TimeUnit.SECONDS.sleep(3);
@@ -106,9 +106,9 @@ public class ServiceTransportTest {
         .doOnError(exceptionHolder::set)
         .subscribe());
 
-    gateway.cluster().listenMembership()
-        .filter(MembershipEvent::isRemoved)
-        .subscribe(onNext -> latch1.countDown(), System.err::println);
+    //gateway.cluster().listenMembership()
+    //    .filter(MembershipEvent::isRemoved)
+    //    .subscribe(onNext -> latch1.countDown(), System.err::println);
 
     // service node goes down
     TimeUnit.SECONDS.sleep(3);
@@ -135,9 +135,9 @@ public class ServiceTransportTest {
         .doOnError(exceptionHolder::set)
         .subscribe());
 
-    gateway.cluster().listenMembership()
-        .filter(MembershipEvent::isRemoved)
-        .subscribe(onNext -> latch1.countDown(), System.err::println);
+    //gateway.cluster().listenMembership()
+    //    .filter(MembershipEvent::isRemoved)
+    //    .subscribe(onNext -> latch1.countDown(), System.err::println);
 
     // service node goes down
     TimeUnit.SECONDS.sleep(3);

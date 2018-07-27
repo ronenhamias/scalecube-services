@@ -1,13 +1,10 @@
 package io.scalecube.services;
 
-import static io.scalecube.services.discovery.ServiceDiscovery.SERVICE_METADATA;
-
-import io.scalecube.cluster.Cluster;
 import io.scalecube.cluster.ClusterConfig;
 import io.scalecube.cluster.membership.IdGenerator;
 import io.scalecube.services.ServiceCall.Call;
-import io.scalecube.services.discovery.ServiceDiscovery;
 import io.scalecube.services.discovery.ServiceScanner;
+import io.scalecube.services.discovery.api.ServiceDiscovery;
 import io.scalecube.services.methods.ServiceMethodRegistry;
 import io.scalecube.services.methods.ServiceMethodRegistryImpl;
 import io.scalecube.services.metrics.Metrics;
@@ -108,7 +105,6 @@ public class Microservices {
   private final ServiceRegistry serviceRegistry;
   private final ClientTransport client;
   private final Metrics metrics;
-  private final ServiceDiscovery discovery;
   private final ServerTransport server;
   private final ServiceMethodRegistry methodRegistry;
   private final List<ServiceInfo> services;
@@ -116,8 +112,8 @@ public class Microservices {
   private final String id;
   private final int servicePort;
 
+  private ServiceDiscovery discovery; // calculated
   private Address serviceAddress; // calculated
-  private Cluster cluster; // calculated
 
   private Microservices(Builder builder) {
     this.id = IdGenerator.generateId();
@@ -129,7 +125,7 @@ public class Microservices {
     this.serviceRegistry = builder.serviceRegistry;
     this.services = Collections.unmodifiableList(new ArrayList<>(builder.services));
     this.methodRegistry = builder.methodRegistry;
-    this.discovery = new ServiceDiscovery(serviceRegistry);
+    this.discovery = ServiceDiscovery.getDiscovery();
   }
 
   public String id() {
@@ -153,11 +149,7 @@ public class Microservices {
           ServiceScanner.scan(services, id, serviceAddress.host(), serviceAddress.port(), new HashMap<>()));
     }
 
-    // setup cluster metadata
-    clusterConfig.addMetadata(serviceRegistry.listServiceEndpoints().stream()
-        .collect(Collectors.toMap(ServiceDiscovery::encodeMetadata, service -> SERVICE_METADATA)));
-
-    return Mono.fromFuture(Cluster.join(clusterConfig.build())).map(this::init);
+    return discovery.start(this.serviceRegistry, clusterConfig).map(this::init);
   }
 
   public Metrics metrics() {
@@ -253,9 +245,8 @@ public class Microservices {
     }
   }
 
-  private Microservices init(Cluster cluster) {
-    this.cluster = cluster;
-    discovery.init(cluster);
+  private Microservices init(ServiceDiscovery discovery) {
+    this.discovery = discovery;
     return Reflect.builder(this).inject();
   }
 
@@ -276,11 +267,10 @@ public class Microservices {
   }
 
   public Mono<Void> shutdown() {
-    return Mono.when(Mono.fromFuture(cluster.shutdown()), server.stop(), serviceRegistry.shutdown());
+    return Mono.when(discovery.shutdown(), server.stop(), serviceRegistry.shutdown());
   }
 
-  public Cluster cluster() {
-    return cluster;
+  public ServiceDiscovery cluster() {
+    return this.discovery;
   }
-
 }

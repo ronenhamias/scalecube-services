@@ -1,9 +1,14 @@
 package io.scalecube.services.discovery;
 
+import static io.scalecube.services.discovery.api.ServiceDiscovery.SERVICE_METADATA;
+
 import io.scalecube.cluster.Cluster;
+import io.scalecube.cluster.ClusterConfig;
 import io.scalecube.cluster.Member;
 import io.scalecube.services.ServiceEndpoint;
+import io.scalecube.services.discovery.api.ServiceDiscovery;
 import io.scalecube.services.registry.api.ServiceRegistry;
+import io.scalecube.transport.Address;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,24 +18,47 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import reactor.core.Exceptions;
+import reactor.core.publisher.Mono;
 
-public class ServiceDiscovery {
+public class ScalecubeServiceDiscovery implements ServiceDiscovery {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ServiceDiscovery.class);
 
   private static final ObjectMapper objectMapper = newObjectMapper();
-  public static final String SERVICE_METADATA = "service";
 
-  private final ServiceRegistry serviceRegistry;
+  private ServiceRegistry serviceRegistry;
+
+  private Cluster cluster;
 
   private enum DiscoveryType {
     ADDED, REMOVED, DISCOVERED;
   }
 
-  public ServiceDiscovery(ServiceRegistry serviceRegistry) {
+  @Override
+  public Mono<ServiceDiscovery> start(ServiceRegistry serviceRegistry, Object config) {
     this.serviceRegistry = serviceRegistry;
+
+    if (config instanceof ClusterConfig.Builder) {
+      ClusterConfig.Builder clusterConfig = (ClusterConfig.Builder) config;
+
+      clusterConfig.addMetadata(serviceRegistry.listServiceEndpoints().stream()
+          .collect(Collectors.toMap(ScalecubeServiceDiscovery::encodeMetadata, service -> SERVICE_METADATA)));
+
+      CompletableFuture<Cluster> promise = Cluster.join(clusterConfig.build())
+          .whenComplete((success,error)->{
+            if(error==null) {
+              this.cluster = success;
+            }
+          });
+      
+      return Mono.fromFuture(promise).map(mapper->this);
+    } else {
+      return Mono.empty();
+    }
   }
 
   public void init(Cluster cluster) {
@@ -106,5 +134,17 @@ public class ServiceDiscovery {
       LOGGER.error("Can write metadata: " + e, e);
       throw Exceptions.propagate(e);
     }
+  }
+
+
+  @Override
+  public Mono<Void> shutdown() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Address address() {
+    return cluster.address();
   }
 }
