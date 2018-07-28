@@ -45,13 +45,13 @@ public class ScalecubeServiceDiscovery implements ServiceDiscovery {
     if (config instanceof ClusterConfig.Builder) {
       ClusterConfig.Builder clusterConfig = (ClusterConfig.Builder) config;
 
-      clusterConfig.addMetadata(serviceRegistry.listServiceEndpoints().stream()
+      clusterConfig.addMetadata(this.serviceRegistry.listServiceEndpoints().stream()
           .collect(Collectors.toMap(ScalecubeServiceDiscovery::encodeMetadata, service -> SERVICE_METADATA)));
-
       CompletableFuture<Cluster> promise = Cluster.join(clusterConfig.build())
           .whenComplete((success,error)->{
             if(error==null) {
               this.cluster = success;
+              this.init(this.cluster);
             }
           });
       
@@ -93,13 +93,13 @@ public class ScalecubeServiceDiscovery implements ServiceDiscovery {
 
           LOGGER.debug("Member: {} is {} : {}", member, type, serviceEndpoint);
           if ((type.equals(DiscoveryType.ADDED) || type.equals(DiscoveryType.DISCOVERED))
-              && (serviceRegistry.registerService(serviceEndpoint))) {
+              && (this.serviceRegistry.registerService(serviceEndpoint))) {
 
             LOGGER.info("Service Reference was ADDED since new Member has joined the cluster {} : {}",
                 member, serviceEndpoint);
 
           } else if (type.equals(DiscoveryType.REMOVED)
-              && (serviceRegistry.unregisterService(serviceEndpoint.id()) != null)) {
+              && (this.serviceRegistry.unregisterService(serviceEndpoint.id()) != null)) {
 
             LOGGER.info("Service Reference was REMOVED since Member have left the cluster {} : {}",
                 member, serviceEndpoint);

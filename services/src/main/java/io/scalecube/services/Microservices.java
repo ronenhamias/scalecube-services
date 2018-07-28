@@ -18,6 +18,7 @@ import io.scalecube.transport.Addressing;
 
 import com.codahale.metrics.MetricRegistry;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.net.InetSocketAddress;
@@ -125,7 +126,7 @@ public class Microservices {
     this.serviceRegistry = builder.serviceRegistry;
     this.services = Collections.unmodifiableList(new ArrayList<>(builder.services));
     this.methodRegistry = builder.methodRegistry;
-    this.discovery = ServiceDiscovery.getDiscovery();
+    this.discovery = builder.discovery;
   }
 
   public String id() {
@@ -148,8 +149,10 @@ public class Microservices {
       serviceRegistry.registerService(
           ServiceScanner.scan(services, id, serviceAddress.host(), serviceAddress.port(), new HashMap<>()));
     }
-
-    return discovery.start(this.serviceRegistry, clusterConfig).map(this::init);
+    
+    Microservices ms = Reflect.builder(this).inject();
+    return discovery.start(this.serviceRegistry, clusterConfig)
+        .then(Mono.just(ms));
   }
 
   public Metrics metrics() {
@@ -171,6 +174,7 @@ public class Microservices {
     private ServiceMethodRegistry methodRegistry = new ServiceMethodRegistryImpl();
     private ServerTransport server = ServiceTransport.getTransport().getServerTransport();
     private ClientTransport client = ServiceTransport.getTransport().getClientTransport();
+    private ServiceDiscovery discovery = ServiceDiscovery.getDiscovery();
 
     public Mono<Microservices> start() {
       Call call = new Call(client, methodRegistry, serviceRegistry).metrics(this.metrics);
@@ -182,7 +186,8 @@ public class Microservices {
                   ((ServiceInfo) service)
                   : ServiceInfo.fromServiceInstance(service).build()));
 
-      return new Microservices(this).start();
+      return new Microservices(this)
+          .start();
     }
 
     public Microservices startAwait() {
@@ -206,6 +211,11 @@ public class Microservices {
 
     public Builder methodRegistry(ServiceMethodRegistry methodRegistry) {
       this.methodRegistry = methodRegistry;
+      return this;
+    }
+
+    public Builder discovery(ServiceDiscovery discovery) {
+      this.discovery = discovery;
       return this;
     }
 
@@ -243,11 +253,6 @@ public class Microservices {
       this.metrics = new Metrics(metrics);
       return this;
     }
-  }
-
-  private Microservices init(ServiceDiscovery discovery) {
-    this.discovery = discovery;
-    return Reflect.builder(this).inject();
   }
 
   public static Builder builder() {
