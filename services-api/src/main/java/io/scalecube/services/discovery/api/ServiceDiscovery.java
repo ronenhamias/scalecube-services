@@ -2,7 +2,6 @@ package io.scalecube.services.discovery.api;
 
 import io.scalecube.services.ServiceEndpoint;
 import io.scalecube.services.ServiceLoaderUtil;
-import io.scalecube.services.registry.api.ServiceRegistry;
 import io.scalecube.transport.Address;
 
 import reactor.core.publisher.Mono;

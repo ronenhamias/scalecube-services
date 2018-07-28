@@ -4,7 +4,6 @@ import io.scalecube.cluster.Cluster;
 import io.scalecube.cluster.ClusterConfig;
 import io.scalecube.cluster.Member;
 import io.scalecube.services.ServiceEndpoint;
-import io.scalecube.services.ServiceReference;
 import io.scalecube.services.discovery.api.DiscoveryConfig;
 import io.scalecube.services.discovery.api.ServiceDiscovery;
 import io.scalecube.services.registry.api.ServiceRegistry;
@@ -17,12 +16,12 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import reactor.core.Exceptions;
+import reactor.core.publisher.Mono;
+
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-
-import reactor.core.Exceptions;
-import reactor.core.publisher.Mono;
 
 public class ScalecubeServiceDiscovery implements ServiceDiscovery {
 
