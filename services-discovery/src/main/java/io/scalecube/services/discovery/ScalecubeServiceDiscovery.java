@@ -139,8 +139,7 @@ public class ScalecubeServiceDiscovery implements ServiceDiscovery {
 
   @Override
   public Mono<Void> shutdown() {
-    // TODO Auto-generated method stub
-    return null;
+    return Mono.fromFuture(cluster.shutdown());
   }
 
   @Override

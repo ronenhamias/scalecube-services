@@ -147,12 +147,12 @@ public class Microservices {
     if (!services.isEmpty()) {
       // TODO: pass tags as well [sergeyr]
       serviceRegistry.registerService(
-          ServiceScanner.scan(services, id, serviceAddress.host(), serviceAddress.port(), new HashMap<>()));
+          ServiceScanner.scan(
+              services, id, serviceAddress.host(), serviceAddress.port(), new HashMap<>()));
     }
-    
-    Microservices ms = Reflect.builder(this).inject();
+
     return discovery.start(this.serviceRegistry, clusterConfig)
-        .then(Mono.just(ms));
+        .then(Mono.just(Reflect.builder(this).inject()));
   }
 
   public Metrics metrics() {
