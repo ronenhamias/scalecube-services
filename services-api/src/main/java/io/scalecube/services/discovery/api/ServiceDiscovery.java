@@ -1,5 +1,6 @@
 package io.scalecube.services.discovery.api;
 
+import io.scalecube.services.ServiceEndpoint;
 import io.scalecube.services.ServiceLoaderUtil;
 import io.scalecube.services.registry.api.ServiceRegistry;
 import io.scalecube.transport.Address;
@@ -16,10 +17,12 @@ public interface ServiceDiscovery {
     return discovery;
   }
 
-  Mono<ServiceDiscovery> start(ServiceRegistry serviceRegistry, Object build);
+  Mono<ServiceDiscovery> start(DiscoveryConfig discoveryConfig);
 
   Mono<Void> shutdown();
 
   Address address();
+
+  ServiceEndpoint endpoint();
   
 }

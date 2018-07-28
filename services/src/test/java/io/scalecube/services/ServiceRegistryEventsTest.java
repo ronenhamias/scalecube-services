@@ -9,11 +9,11 @@ import io.scalecube.services.sut.GreetingServiceImpl;
 
 import org.junit.jupiter.api.Test;
 
+import reactor.core.publisher.Mono;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-
-import reactor.core.publisher.Mono;
 
 public class ServiceRegistryEventsTest {
 
@@ -27,11 +27,11 @@ public class ServiceRegistryEventsTest {
 
     seed.serviceRegistry().listen().subscribe(events::add);
 
-    Microservices ms1 = Microservices.builder().seeds(seed.cluster().address())
+    Microservices ms1 = Microservices.builder().seeds(seed.discovery().address())
         .services(new GreetingServiceImpl())
         .startAwait();
 
-    Microservices ms2 = Microservices.builder().seeds(seed.cluster().address())
+    Microservices ms2 = Microservices.builder().seeds(seed.discovery().address())
         .services(new GreetingServiceImpl())
         .startAwait();
 

@@ -41,4 +41,14 @@ public class RegistrationEvent {
   public String toString() {
     return "RegistrationEvent [serviceEndpoint=" + serviceEndpoint + ", type=" + type + "]";
   }
+
+  public boolean isRegistered() {
+    return Type.REGISTERED.equals(this.type);
+  }
+  
+  public boolean isUnregistered() {
+    return Type.UNREGISTERED.equals(this.type);
+  }
+  
+  
 }

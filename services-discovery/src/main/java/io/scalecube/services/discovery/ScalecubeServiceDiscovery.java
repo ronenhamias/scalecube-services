@@ -1,11 +1,11 @@
 package io.scalecube.services.discovery;
 
-import static io.scalecube.services.discovery.api.ServiceDiscovery.SERVICE_METADATA;
-
 import io.scalecube.cluster.Cluster;
 import io.scalecube.cluster.ClusterConfig;
 import io.scalecube.cluster.Member;
 import io.scalecube.services.ServiceEndpoint;
+import io.scalecube.services.ServiceReference;
+import io.scalecube.services.discovery.api.DiscoveryConfig;
 import io.scalecube.services.discovery.api.ServiceDiscovery;
 import io.scalecube.services.registry.api.ServiceRegistry;
 import io.scalecube.transport.Address;
@@ -26,6 +26,8 @@ import reactor.core.publisher.Mono;
 
 public class ScalecubeServiceDiscovery implements ServiceDiscovery {
 
+  private ClusterConfig.Builder clusterConfig = ClusterConfig.builder();
+
   private static final Logger LOGGER = LoggerFactory.getLogger(ServiceDiscovery.class);
 
   private static final ObjectMapper objectMapper = newObjectMapper();
@@ -34,34 +36,47 @@ public class ScalecubeServiceDiscovery implements ServiceDiscovery {
 
   private Cluster cluster;
 
+  private ServiceEndpoint endpoint;
+
   private enum DiscoveryType {
     ADDED, REMOVED, DISCOVERED;
   }
 
   @Override
-  public Mono<ServiceDiscovery> start(ServiceRegistry serviceRegistry, Object config) {
-    this.serviceRegistry = serviceRegistry;
+  public Mono<ServiceDiscovery> start(DiscoveryConfig config) {
+    configure(config);
+    
+    clusterConfig.addMetadata(this.serviceRegistry.listServiceEndpoints().stream()
+        .collect(Collectors.toMap(ScalecubeServiceDiscovery::encodeMetadata, service -> SERVICE_METADATA)));
+    CompletableFuture<Cluster> promise = Cluster.join(clusterConfig.build())
+        .whenComplete((success, error) -> {
+          if (error == null) {
+            this.cluster = success;
+            this.init(this.cluster);
+          }
+        });
 
-    if (config instanceof ClusterConfig.Builder) {
-      ClusterConfig.Builder clusterConfig = (ClusterConfig.Builder) config;
+    return Mono.fromFuture(promise).map(mapper -> this);
+  }
 
-      clusterConfig.addMetadata(this.serviceRegistry.listServiceEndpoints().stream()
-          .collect(Collectors.toMap(ScalecubeServiceDiscovery::encodeMetadata, service -> SERVICE_METADATA)));
-      CompletableFuture<Cluster> promise = Cluster.join(clusterConfig.build())
-          .whenComplete((success,error)->{
-            if(error==null) {
-              this.cluster = success;
-              this.init(this.cluster);
-            }
-          });
-      
-      return Mono.fromFuture(promise).map(mapper->this);
-    } else {
-      return Mono.empty();
+  private void configure(DiscoveryConfig config) {
+    this.serviceRegistry = config.serviceRegistry();
+    this.endpoint = config.endpoint();
+    
+    if(config.seeds() !=null) {
+      clusterConfig.seedMembers(config.seeds());
+    }
+    
+    if(config.port() !=null) {
+      clusterConfig.port(config.port());
+    }
+    
+    if(config.metadata() !=null) {
+      clusterConfig.metadata(config.metadata());
     }
   }
 
-  public void init(Cluster cluster) {
+  private void init(Cluster cluster) {
     loadClusterServices(cluster);
     listenCluster(cluster);
   }
@@ -118,7 +133,7 @@ public class ScalecubeServiceDiscovery implements ServiceDiscovery {
     return objectMapper;
   }
 
-  public static ServiceEndpoint decodeMetadata(String metadata) {
+  private static ServiceEndpoint decodeMetadata(String metadata) {
     try {
       return objectMapper.readValue(metadata, ServiceEndpoint.class);
     } catch (IOException e) {
@@ -127,7 +142,7 @@ public class ScalecubeServiceDiscovery implements ServiceDiscovery {
     }
   }
 
-  public static String encodeMetadata(ServiceEndpoint serviceEndpoint) {
+  private static String encodeMetadata(ServiceEndpoint serviceEndpoint) {
     try {
       return objectMapper.writeValueAsString(serviceEndpoint);
     } catch (IOException e) {
@@ -145,5 +160,10 @@ public class ScalecubeServiceDiscovery implements ServiceDiscovery {
   @Override
   public Address address() {
     return cluster.address();
+  }
+
+  @Override
+  public ServiceEndpoint endpoint() {
+    return this.endpoint;
   }
 }

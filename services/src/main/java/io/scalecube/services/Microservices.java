@@ -1,9 +1,9 @@
 package io.scalecube.services;
 
-import io.scalecube.cluster.ClusterConfig;
 import io.scalecube.cluster.membership.IdGenerator;
 import io.scalecube.services.ServiceCall.Call;
 import io.scalecube.services.discovery.ServiceScanner;
+import io.scalecube.services.discovery.api.DiscoveryConfig;
 import io.scalecube.services.discovery.api.ServiceDiscovery;
 import io.scalecube.services.methods.ServiceMethodRegistry;
 import io.scalecube.services.methods.ServiceMethodRegistryImpl;
@@ -18,7 +18,6 @@ import io.scalecube.transport.Addressing;
 
 import com.codahale.metrics.MetricRegistry;
 
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.net.InetSocketAddress;
@@ -109,12 +108,13 @@ public class Microservices {
   private final ServerTransport server;
   private final ServiceMethodRegistry methodRegistry;
   private final List<ServiceInfo> services;
-  private final ClusterConfig.Builder clusterConfig;
   private final String id;
   private final int servicePort;
 
+  private DiscoveryConfig.Builder discoveryConfig; // calculated
   private ServiceDiscovery discovery; // calculated
   private Address serviceAddress; // calculated
+  private ServiceEndpoint endpoint;
 
   private Microservices(Builder builder) {
     this.id = IdGenerator.generateId();
@@ -122,11 +122,11 @@ public class Microservices {
     this.metrics = builder.metrics;
     this.client = builder.client;
     this.server = builder.server;
-    this.clusterConfig = builder.clusterConfig;
     this.serviceRegistry = builder.serviceRegistry;
     this.services = Collections.unmodifiableList(new ArrayList<>(builder.services));
     this.methodRegistry = builder.methodRegistry;
     this.discovery = builder.discovery;
+    this.discoveryConfig = builder.discoveryConfig;
   }
 
   public String id() {
@@ -146,12 +146,16 @@ public class Microservices {
     // register services in service registry
     if (!services.isEmpty()) {
       // TODO: pass tags as well [sergeyr]
-      serviceRegistry.registerService(
-          ServiceScanner.scan(
-              services, id, serviceAddress.host(), serviceAddress.port(), new HashMap<>()));
+      this.endpoint = ServiceScanner.scan(
+          services, id, serviceAddress.host(), serviceAddress.port(), new HashMap<>());
+      serviceRegistry.registerService(endpoint);
+
+      discoveryConfig.endpoint(endpoint);
     }
 
-    return discovery.start(this.serviceRegistry, clusterConfig)
+    return discovery.start(discoveryConfig
+        .serviceRegistry(serviceRegistry)
+        .build())
         .then(Mono.just(Reflect.builder(this).inject()));
   }
 
@@ -168,13 +172,13 @@ public class Microservices {
     private int servicePort = 0;
     private List<ServiceInfo> services = new ArrayList<>();
     private List<Function<Call, Collection<Object>>> serviceProviders = new ArrayList<>();
-    private ClusterConfig.Builder clusterConfig = ClusterConfig.builder();
     private Metrics metrics;
     private ServiceRegistry serviceRegistry = new ServiceRegistryImpl();
     private ServiceMethodRegistry methodRegistry = new ServiceMethodRegistryImpl();
     private ServerTransport server = ServiceTransport.getTransport().getServerTransport();
     private ClientTransport client = ServiceTransport.getTransport().getClientTransport();
     private ServiceDiscovery discovery = ServiceDiscovery.getDiscovery();
+    private DiscoveryConfig.Builder discoveryConfig = DiscoveryConfig.builder();
 
     public Mono<Microservices> start() {
       Call call = new Call(client, methodRegistry, serviceRegistry).metrics(this.metrics);
@@ -230,7 +234,7 @@ public class Microservices {
     }
 
     public Builder discoveryPort(int port) {
-      this.clusterConfig.port(port);
+      this.discoveryConfig.port(port);
       return this;
     }
 
@@ -240,12 +244,12 @@ public class Microservices {
     }
 
     public Builder seeds(Address... seeds) {
-      this.clusterConfig.seedMembers(seeds);
+      this.discoveryConfig.seeds(seeds);
       return this;
     }
 
-    public Builder clusterConfig(ClusterConfig.Builder clusterConfig) {
-      this.clusterConfig = clusterConfig;
+    public Builder discoveryConfig(DiscoveryConfig.Builder discoveryConfig) {
+      this.discoveryConfig = discoveryConfig;
       return this;
     }
 
@@ -275,7 +279,7 @@ public class Microservices {
     return Mono.when(discovery.shutdown(), server.stop(), serviceRegistry.shutdown());
   }
 
-  public ServiceDiscovery cluster() {
+  public ServiceDiscovery discovery() {
     return this.discovery;
   }
 }
