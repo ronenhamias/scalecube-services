@@ -25,11 +25,11 @@ public class Example3 {
         .services(new GreetingServiceImpl())
         .startAwait();
 
-    ServiceCall.client().address(Address.create("locahost", 9090));
+    GreetingsService service = ServiceCall.client()
+        .address(Address.create(microservices.discovery().endpoint().host(), 9090))
+        .create()
+        .api(GreetingsService.class);
     
-    // Create service proxy
-    GreetingsService service = microservices.call().create().api(GreetingsService.class);
-
     // Execute the services and subscribe to service events
     service.sayHello("joe").subscribe(consumer -> {
       System.out.println(consumer.message());

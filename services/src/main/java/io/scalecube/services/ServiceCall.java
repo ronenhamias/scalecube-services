@@ -312,7 +312,7 @@ public class ServiceCall {
   }
 
   private Mono<Address> addressLookup(ServiceMessage request) {
-    if (this.address != null && this.address.length > 0) {
+    if (this.address == null || this.address.length == 0) {
       return router.route(serviceRegistry, request)
           .map(serviceReference -> Mono.just(Address.create(serviceReference.host(), serviceReference.port())))
           .orElseGet(() -> Mono.error(noReachableMemberException(request)));
