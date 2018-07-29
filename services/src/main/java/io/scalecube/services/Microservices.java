@@ -4,6 +4,7 @@ import io.scalecube.cluster.membership.IdGenerator;
 import io.scalecube.services.ServiceCall.Call;
 import io.scalecube.services.discovery.ServiceScanner;
 import io.scalecube.services.discovery.api.DiscoveryConfig;
+import io.scalecube.services.discovery.api.LocalServiceDiscovery;
 import io.scalecube.services.discovery.api.ServiceDiscovery;
 import io.scalecube.services.methods.ServiceMethodRegistry;
 import io.scalecube.services.methods.ServiceMethodRegistryImpl;
@@ -245,6 +246,10 @@ public class Microservices {
       return this;
     }
 
+    public Builder disableDiscovery() {
+      this.discovery  = new LocalServiceDiscovery();
+      return this;
+    }
     public Builder discoveryPort(int port) {
       this.discoveryConfig.port(port);
       return this;
