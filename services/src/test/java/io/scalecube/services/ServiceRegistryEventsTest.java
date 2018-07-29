@@ -1,10 +1,10 @@
 package io.scalecube.services;
 
-import static io.scalecube.services.registry.api.RegistrationEvent.Type.REGISTERED;
-import static io.scalecube.services.registry.api.RegistrationEvent.Type.UNREGISTERED;
+import static io.scalecube.services.discovery.api.DiscoveryEvent.Type.REGISTERED;
+import static io.scalecube.services.discovery.api.DiscoveryEvent.Type.UNREGISTERED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import io.scalecube.services.registry.api.RegistrationEvent;
+import io.scalecube.services.discovery.api.DiscoveryEvent;
 import io.scalecube.services.sut.GreetingServiceImpl;
 
 import org.junit.jupiter.api.Test;
@@ -20,12 +20,12 @@ public class ServiceRegistryEventsTest {
   @Test
   public void test_added_removed_registration_events() {
 
-    List<RegistrationEvent> events = new ArrayList<>();
+    List<DiscoveryEvent> events = new ArrayList<>();
 
     Microservices seed = Microservices.builder()
         .startAwait();
 
-    seed.serviceRegistry().listen().subscribe(events::add);
+    seed.discovery().listen().subscribe(events::add);
 
     Microservices ms1 = Microservices.builder().seeds(seed.discovery().address())
         .services(new GreetingServiceImpl())

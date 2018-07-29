@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.scalecube.cluster.membership.MembershipEvent;
 import io.scalecube.services.api.ServiceMessage;
+import io.scalecube.services.discovery.api.DiscoveryEvent;
 import io.scalecube.services.exceptions.ConnectionClosedException;
-import io.scalecube.services.registry.api.RegistrationEvent;
 import io.scalecube.services.sut.QuoteService;
 import io.scalecube.services.sut.SimpleQuoteService;
 
@@ -78,8 +78,8 @@ public class ServiceTransportTest {
         .doOnError(exceptionHolder::set)
         .subscribe());
 
-    gateway.serviceRegistry().listen()
-        .filter(RegistrationEvent::isUnregistered)
+    gateway.discovery().listen()
+        .filter(DiscoveryEvent::isUnregistered)
         .subscribe(onNext -> latch1.countDown(), System.err::println);
 
     // service node goes down
@@ -107,8 +107,8 @@ public class ServiceTransportTest {
         .doOnError(exceptionHolder::set)
         .subscribe());
 
-    gateway.serviceRegistry().listen()
-        .filter(RegistrationEvent::isUnregistered)
+    gateway.discovery().listen()
+        .filter(DiscoveryEvent::isUnregistered)
         .subscribe(onNext -> latch1.countDown(), System.err::println);
 
 
@@ -137,8 +137,8 @@ public class ServiceTransportTest {
         .doOnError(exceptionHolder::set)
         .subscribe());
 
-    gateway.serviceRegistry().listen()
-        .filter(RegistrationEvent::isUnregistered)
+    gateway.discovery().listen()
+        .filter(DiscoveryEvent::isUnregistered)
         .subscribe(onNext -> latch1.countDown(), System.err::println);
 
     // service node goes down

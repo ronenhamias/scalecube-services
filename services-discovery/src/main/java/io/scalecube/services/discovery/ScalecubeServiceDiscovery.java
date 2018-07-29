@@ -5,6 +5,7 @@ import io.scalecube.cluster.ClusterConfig;
 import io.scalecube.cluster.Member;
 import io.scalecube.services.ServiceEndpoint;
 import io.scalecube.services.discovery.api.DiscoveryConfig;
+import io.scalecube.services.discovery.api.DiscoveryEvent;
 import io.scalecube.services.discovery.api.ServiceDiscovery;
 import io.scalecube.services.registry.api.ServiceRegistry;
 import io.scalecube.transport.Address;
@@ -17,6 +18,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import reactor.core.Exceptions;
+import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
@@ -37,6 +41,9 @@ public class ScalecubeServiceDiscovery implements ServiceDiscovery {
 
   private ServiceEndpoint endpoint;
 
+  private final DirectProcessor<DiscoveryEvent> subject = DirectProcessor.create();
+  private final FluxSink<DiscoveryEvent> sink = subject.serialize().sink();
+  
   private enum DiscoveryType {
     ADDED, REMOVED, DISCOVERED;
   }
@@ -111,12 +118,20 @@ public class ScalecubeServiceDiscovery implements ServiceDiscovery {
 
             LOGGER.info("Service Reference was ADDED since new Member has joined the cluster {} : {}",
                 member, serviceEndpoint);
-
+            
+            DiscoveryEvent registrationEvent = DiscoveryEvent.registered(serviceEndpoint);
+            LOGGER.debug("Publish registered: " + registrationEvent);
+            sink.next(registrationEvent);
+            
           } else if (type.equals(DiscoveryType.REMOVED)
               && (this.serviceRegistry.unregisterService(serviceEndpoint.id()) != null)) {
 
             LOGGER.info("Service Reference was REMOVED since Member have left the cluster {} : {}",
                 member, serviceEndpoint);
+            
+            DiscoveryEvent registrationEvent = DiscoveryEvent.unregistered(serviceEndpoint);
+            LOGGER.debug("Publish unregistered: " + registrationEvent);
+            sink.next(registrationEvent);
           }
         });
   }
@@ -153,6 +168,7 @@ public class ScalecubeServiceDiscovery implements ServiceDiscovery {
 
   @Override
   public Mono<Void> shutdown() {
+    sink.complete();
     return Mono.fromFuture(cluster.shutdown());
   }
 
@@ -164,5 +180,12 @@ public class ScalecubeServiceDiscovery implements ServiceDiscovery {
   @Override
   public ServiceEndpoint endpoint() {
     return this.endpoint;
+  }
+
+  @Override
+  public Flux<DiscoveryEvent> listen() {
+    return Flux.fromIterable(serviceRegistry.listServiceEndpoints())
+        .map(DiscoveryEvent::registered)
+        .concatWith(subject);
   }
 }

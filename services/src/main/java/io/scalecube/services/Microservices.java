@@ -150,7 +150,7 @@ public class Microservices {
     if (!services.isEmpty()) {
       this.endpoint = ServiceScanner.scan(
           services, id, serviceAddress.host(), serviceAddress.port(), tags);
-     
+
       serviceRegistry.registerService(endpoint);
       discoveryConfig.endpoint(endpoint);
     }
@@ -263,7 +263,7 @@ public class Microservices {
     }
 
     public Builder tags(Map<String, String> tags) {
-      this.tags =tags;
+      this.tags = tags;
       return this;
     }
   }
@@ -285,7 +285,7 @@ public class Microservices {
   }
 
   public Mono<Void> shutdown() {
-    return Mono.when(discovery.shutdown(), server.stop(), serviceRegistry.shutdown());
+    return Mono.when(discovery.shutdown(), server.stop());
   }
 
   public ServiceDiscovery discovery() {
