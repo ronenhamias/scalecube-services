@@ -11,14 +11,14 @@ public class DiscoveryConfig {
   private Integer port;
   private Address[] seeds;
   private ServiceRegistry serviceRegistry;
-  private Map<String, String> metadata;
+  private Map<String, String> tags;
   private ServiceEndpoint endpoint;
 
   private DiscoveryConfig(Builder builder) {
     this.seeds = builder.seeds;
     this.serviceRegistry = builder.serviceRegistry;
     this.port = builder.port;
-    this.metadata = builder.metadata;
+    this.tags = builder.tags;
     this.endpoint = builder.endpoint;
   }
 
@@ -34,8 +34,8 @@ public class DiscoveryConfig {
     return serviceRegistry;
   }
 
-  public Map<String, String> metadata(){
-    return this.metadata;
+  public Map<String, String> tags(){
+    return this.tags;
   }
 
   public ServiceEndpoint endpoint() {
@@ -50,7 +50,7 @@ public class DiscoveryConfig {
     private Address[] seeds;
     private Integer port;
     private ServiceRegistry serviceRegistry;
-    private Map<String, String> metadata;
+    private Map<String, String> tags;
     private ServiceEndpoint endpoint;
 
     public Builder seeds(Address[] seeds) {
@@ -72,8 +72,8 @@ public class DiscoveryConfig {
       return new DiscoveryConfig(this);
     }
 
-    public Builder metadata(Map<String, String> metadata) {
-      this.metadata = metadata;
+    public Builder tags(Map<String, String> tags) {
+      this.tags = tags;
       return this;
     }
 

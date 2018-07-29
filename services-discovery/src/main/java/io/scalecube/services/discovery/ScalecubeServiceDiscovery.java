@@ -70,8 +70,8 @@ public class ScalecubeServiceDiscovery implements ServiceDiscovery {
       clusterConfig.port(config.port());
     }
     
-    if(config.metadata() !=null) {
-      clusterConfig.metadata(config.metadata());
+    if(config.tags() !=null) {
+      clusterConfig.metadata(config.tags());
     }
   }
 
