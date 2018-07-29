@@ -117,6 +117,7 @@ public class Microservices {
   private Address serviceAddress; // calculated
   private Map<String, String> tags;
   private ServiceEndpoint endpoint;
+  private String aliasName;
 
   private Microservices(Builder builder) {
     this.id = IdGenerator.generateId();
@@ -130,10 +131,15 @@ public class Microservices {
     this.discovery = builder.discovery;
     this.discoveryConfig = builder.discoveryConfig;
     this.tags = builder.tags;
+    this.aliasName = builder.aliasName;
   }
 
   public String id() {
     return this.id;
+  }
+
+  public String aliasName() {
+    return this.aliasName;
   }
 
   private Mono<Microservices> start() {
@@ -155,8 +161,9 @@ public class Microservices {
       discoveryConfig.endpoint(endpoint);
     }
 
-    return discovery.start(discoveryConfig
-        .serviceRegistry(serviceRegistry)
+    // configure discovery and publish to the cluster.
+    discoveryConfig.aliasName(aliasName !=null ? aliasName : this.id);
+    return discovery.start(discoveryConfig.serviceRegistry(serviceRegistry)
         .build())
         .map(discovery -> (this.discovery = discovery))
         .then(Mono.just(Reflect.builder(this).inject()));
@@ -172,6 +179,7 @@ public class Microservices {
 
   public static final class Builder {
 
+    public String aliasName;
     private int servicePort = 0;
     private List<ServiceInfo> services = new ArrayList<>();
     private List<Function<Call, Collection<Object>>> serviceProviders = new ArrayList<>();
@@ -244,6 +252,11 @@ public class Microservices {
 
     public Builder servicePort(int port) {
       this.servicePort = port;
+      return this;
+    }
+
+    public Builder aliasName(String aliasName) {
+      this.aliasName = aliasName;
       return this;
     }
 
