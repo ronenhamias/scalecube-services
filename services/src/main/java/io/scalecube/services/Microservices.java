@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -114,6 +115,7 @@ public class Microservices {
   private DiscoveryConfig.Builder discoveryConfig; // calculated
   private ServiceDiscovery discovery; // calculated
   private Address serviceAddress; // calculated
+  private Map<String, String> tags;
   private ServiceEndpoint endpoint;
 
   private Microservices(Builder builder) {
@@ -127,6 +129,7 @@ public class Microservices {
     this.methodRegistry = builder.methodRegistry;
     this.discovery = builder.discovery;
     this.discoveryConfig = builder.discoveryConfig;
+    this.tags = builder.tags;
   }
 
   public String id() {
@@ -145,17 +148,17 @@ public class Microservices {
 
     // register services in service registry
     if (!services.isEmpty()) {
-      // TODO: pass tags as well [sergeyr]
       this.endpoint = ServiceScanner.scan(
-          services, id, serviceAddress.host(), serviceAddress.port(), new HashMap<>());
+          services, id, serviceAddress.host(), serviceAddress.port(), tags);
+     
       serviceRegistry.registerService(endpoint);
-
       discoveryConfig.endpoint(endpoint);
     }
 
     return discovery.start(discoveryConfig
         .serviceRegistry(serviceRegistry)
         .build())
+        .map(discovery -> (this.discovery = discovery))
         .then(Mono.just(Reflect.builder(this).inject()));
   }
 
@@ -179,6 +182,7 @@ public class Microservices {
     private ClientTransport client = ServiceTransport.getTransport().getClientTransport();
     private ServiceDiscovery discovery = ServiceDiscovery.getDiscovery();
     private DiscoveryConfig.Builder discoveryConfig = DiscoveryConfig.builder();
+    private Map<String, String> tags = new HashMap<>();
 
     public Mono<Microservices> start() {
       Call call = new Call(client, methodRegistry, serviceRegistry).metrics(this.metrics);
@@ -255,6 +259,11 @@ public class Microservices {
 
     public Builder metrics(MetricRegistry metrics) {
       this.metrics = new Metrics(metrics);
+      return this;
+    }
+
+    public Builder tags(Map<String, String> tags) {
+      this.tags =tags;
       return this;
     }
   }

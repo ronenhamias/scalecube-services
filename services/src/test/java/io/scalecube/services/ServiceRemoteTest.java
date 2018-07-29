@@ -333,11 +333,11 @@ public class ServiceRemoteTest extends BaseTest {
 
   @Test
   public void test_services_contribute_to_cluster_metadata() {
-    Map<String, String> metadata = new HashMap<>();
-    metadata.put("HOSTNAME", "host1");
+    Map<String, String> tags = new HashMap<>();
+    tags.put("HOSTNAME", "host1");
 
     Microservices ms = Microservices.builder()
-        .discoveryConfig(DiscoveryConfig.builder().metadata(metadata))
+        .tags(tags)
         .services(new GreetingServiceImpl())
         .startAwait();
 
