@@ -8,11 +8,14 @@ import io.scalecube.services.exceptions.ExceptionProcessor;
 import io.scalecube.services.exceptions.ServiceUnavailableException;
 import io.scalecube.services.methods.MethodInfo;
 import io.scalecube.services.methods.ServiceMethodRegistry;
+import io.scalecube.services.methods.ServiceMethodRegistryImpl;
 import io.scalecube.services.metrics.Metrics;
+import io.scalecube.services.registry.ServiceRegistryImpl;
 import io.scalecube.services.registry.api.ServiceRegistry;
 import io.scalecube.services.routing.RoundRobinServiceRouter;
 import io.scalecube.services.routing.Router;
 import io.scalecube.services.routing.Routers;
+import io.scalecube.services.transport.ServiceTransport;
 import io.scalecube.services.transport.client.api.ClientTransport;
 import io.scalecube.transport.Address;
 
@@ -20,24 +23,26 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 public class ServiceCall {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ServiceCall.class);
+  private static final ClientTransport client = ServiceTransport.getTransport().getClientTransport();
 
   private final ClientTransport transport;
   private final ServiceMethodRegistry methodRegistry;
   private final ServiceRegistry serviceRegistry;
   private final Router router;
   private final Metrics metrics;
+  private Address[] address;
 
   ServiceCall(Call call) {
     this.transport = call.transport;
@@ -45,6 +50,11 @@ public class ServiceCall {
     this.serviceRegistry = call.serviceRegistry;
     this.router = call.router;
     this.metrics = call.metrics;
+    this.address = call.address;
+  }
+
+  public static Call remote() {
+    return new Call(client);
   }
 
   public static class Call {
@@ -56,12 +66,24 @@ public class ServiceCall {
     private final ServiceMethodRegistry methodRegistry;
     private final ServiceRegistry serviceRegistry;
 
+    private Address[] address;
+
     public Call(ClientTransport transport,
         ServiceMethodRegistry methodRegistry,
         ServiceRegistry serviceRegistry) {
       this.transport = transport;
       this.serviceRegistry = serviceRegistry;
       this.methodRegistry = methodRegistry;
+    }
+
+
+    public Call(ClientTransport transport) {
+      this(transport, new ServiceMethodRegistryImpl(), new ServiceRegistryImpl());
+    }
+
+    public Call address(Address... address) {
+      this.address = address;
+      return this;
     }
 
     public Call router(Class<? extends Router> routerType) {
@@ -295,9 +317,14 @@ public class ServiceCall {
   }
 
   private Mono<Address> addressLookup(ServiceMessage request) {
-    return router.route(serviceRegistry, request)
-        .map(serviceReference -> Mono.just(Address.create(serviceReference.host(), serviceReference.port())))
-        .orElseGet(() -> Mono.error(noReachableMemberException(request)));
+    if (this.address == null || this.address.length == 0) {
+      return router.route(serviceRegistry, request)
+          .map(serviceReference -> Mono.just(Address.create(serviceReference.host(), serviceReference.port())))
+          .orElseGet(() -> Mono.error(noReachableMemberException(request)));
+    } else {
+      // TODO: apply router in case there is more then one possible address
+      return Mono.just(this.address[0]);
+    }
   }
 
   private static ServiceMessage toServiceMessage(MethodInfo methodInfo, Object... params) {
