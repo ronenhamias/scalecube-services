@@ -25,7 +25,7 @@ public class Example3 {
         .services(new GreetingServiceImpl())
         .startAwait();
 
-    GreetingsService service = ServiceCall.client()
+    GreetingsService service = ServiceCall.remote()
         .address(Address.create(microservices.discovery().endpoint().host(), 9090))
         .create()
         .api(GreetingsService.class);

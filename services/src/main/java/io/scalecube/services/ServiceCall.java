@@ -53,9 +53,8 @@ public class ServiceCall {
     this.address = call.address;
   }
 
-  public static Call client() {
-    ServiceMethodRegistry methodRegistry = new ServiceMethodRegistryImpl();
-    return new Call(client, methodRegistry, new ServiceRegistryImpl());
+  public static Call remote() {
+    return new Call(client);
   }
 
   public static class Call {
@@ -66,6 +65,7 @@ public class ServiceCall {
     private final ClientTransport transport;
     private final ServiceMethodRegistry methodRegistry;
     private final ServiceRegistry serviceRegistry;
+
     private Address[] address;
 
     public Call(ClientTransport transport,
@@ -74,6 +74,11 @@ public class ServiceCall {
       this.transport = transport;
       this.serviceRegistry = serviceRegistry;
       this.methodRegistry = methodRegistry;
+    }
+
+
+    public Call(ClientTransport transport) {
+      this(transport, new ServiceMethodRegistryImpl(), new ServiceRegistryImpl());
     }
 
     public Call address(Address... address) {
