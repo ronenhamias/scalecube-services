@@ -108,7 +108,7 @@ public class Microservices {
   private final List<ServiceInfo> services;
   private final String id;
   private final int servicePort;
-  private List<Tuple2<Class<? extends Gateway>, GatewayConfig>> gateways;
+  private List<Tuple2<Gateway, GatewayConfig>> gatewayHolders;
 
   private DiscoveryConfig.Builder discoveryConfig; // calculated
   private ServiceDiscovery discovery; // calculated
@@ -128,7 +128,14 @@ public class Microservices {
     this.discovery = builder.discovery;
     this.discoveryConfig = builder.discoveryConfig;
     this.tags = builder.tags;
-    this.gateways = builder.gateways;
+    this.gatewayHolders = builder.gatewayDefinitions
+        .stream()
+        .map(gatewayDefinition -> {
+          Gateway gateway = Gateway.getGateway(gatewayDefinition.getT1());
+          GatewayConfig config = gatewayDefinition.getT2();
+          return Tuples.of(gateway, config);
+        })
+        .collect(Collectors.toList());
   }
 
   public String id() {
@@ -159,11 +166,11 @@ public class Microservices {
         .build())
         .map(discovery -> (this.discovery = discovery))
         .then(Mono.just(Reflect.builder(this).inject()))
-        .then(Flux.fromIterable(gateways)
-            .flatMap(tuple -> {
-              final Class<? extends Gateway> gatewayClass = tuple.getT1();
-              final GatewayConfig config = tuple.getT2();
-              return Gateway.getGateway(gatewayClass).start(config);
+        .then(Flux.fromIterable(gatewayHolders)
+            .flatMap(gatewayHolder -> {
+              Gateway gateway = gatewayHolder.getT1();
+              GatewayConfig config = gatewayHolder.getT2();
+              return gateway.start(config);
             })
             .then(Mono.just(this)));
   }
@@ -189,7 +196,7 @@ public class Microservices {
     private ServiceDiscovery discovery = ServiceDiscovery.getDiscovery();
     private DiscoveryConfig.Builder discoveryConfig = DiscoveryConfig.builder();
     private Map<String, String> tags = new HashMap<>();
-    private List<Tuple2<Class<? extends Gateway>, GatewayConfig>> gateways = new ArrayList<>();
+    private List<Tuple2<Class<? extends Gateway>, GatewayConfig>> gatewayDefinitions = new ArrayList<>();
 
     public Mono<Microservices> start() {
       Call call = new Call(client, methodRegistry, serviceRegistry).metrics(this.metrics);
@@ -275,7 +282,7 @@ public class Microservices {
     }
 
     public Builder gateway(Class<? extends Gateway> gatewayClass, GatewayConfig config) {
-      gateways.add(Tuples.of(gatewayClass, config));
+      gatewayDefinitions.add(Tuples.of(gatewayClass, config));
       return this;
     }
 
@@ -301,7 +308,12 @@ public class Microservices {
   }
 
   public Mono<Void> shutdown() {
-    return Mono.when(discovery.shutdown(), server.stop(), ServiceTransport.getTransport().shutdown());
+    return Mono.when(
+        Flux.fromIterable(gatewayHolders)
+            .flatMap(gatewayHolder -> gatewayHolder.getT1().stop()),
+        discovery.shutdown(),
+        server.stop(),
+        ServiceTransport.getTransport().shutdown());
   }
 
   public ServiceDiscovery discovery() {
