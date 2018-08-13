@@ -22,7 +22,7 @@ public interface Gateway {
   Mono<InetSocketAddress> start();
 
   /**
-   * Starts the gateway with given configuration. In case come options are not overridden, default values will be used.
+   * Starts the gateway with given configuration. In case some options are not overridden, default values will be used.
    * 
    * @param config gateway configuration
    * @return IP socket address on which gateway is listening to requests

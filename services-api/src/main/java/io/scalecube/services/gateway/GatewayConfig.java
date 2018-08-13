@@ -68,13 +68,12 @@ public final class GatewayConfig {
     }
 
     public Builder addOptions(Map<String, Object> options) {
-      options.putAll(options);
+      this.options.putAll(options);
       return this;
     }
 
     public GatewayConfig build() {
       return new GatewayConfig(this);
     }
-
   }
 }
