@@ -25,7 +25,7 @@ public final class GatewayConfig {
    * @return optional value of port
    */
   public Optional<Integer> port() {
-    return Optional.of(port);
+    return Optional.ofNullable(port);
   }
 
   /**
