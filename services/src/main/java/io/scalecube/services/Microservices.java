@@ -5,6 +5,8 @@ import io.scalecube.services.ServiceCall.Call;
 import io.scalecube.services.discovery.ServiceScanner;
 import io.scalecube.services.discovery.api.DiscoveryConfig;
 import io.scalecube.services.discovery.api.ServiceDiscovery;
+import io.scalecube.services.gateway.Gateway;
+import io.scalecube.services.gateway.GatewayConfig;
 import io.scalecube.services.methods.ServiceMethodRegistry;
 import io.scalecube.services.methods.ServiceMethodRegistryImpl;
 import io.scalecube.services.metrics.Metrics;
@@ -29,7 +31,10 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 /**
  * The ScaleCube-Services module enables to provision and consuming microservices in a cluster. ScaleCube-Services
@@ -103,6 +108,7 @@ public class Microservices {
   private final List<ServiceInfo> services;
   private final String id;
   private final int servicePort;
+  private List<Tuple2<Class<? extends Gateway>, GatewayConfig>> gateways;
 
   private DiscoveryConfig.Builder discoveryConfig; // calculated
   private ServiceDiscovery discovery; // calculated
@@ -122,6 +128,7 @@ public class Microservices {
     this.discovery = builder.discovery;
     this.discoveryConfig = builder.discoveryConfig;
     this.tags = builder.tags;
+    this.gateways = builder.gateways;
   }
 
   public String id() {
@@ -151,7 +158,14 @@ public class Microservices {
     return discovery.start(discoveryConfig.serviceRegistry(serviceRegistry)
         .build())
         .map(discovery -> (this.discovery = discovery))
-        .then(Mono.just(Reflect.builder(this).inject()));
+        .then(Mono.just(Reflect.builder(this).inject()))
+        .then(Flux.fromIterable(gateways)
+            .flatMap(tuple -> {
+              final Class<? extends Gateway> gatewayClass = tuple.getT1();
+              final GatewayConfig config = tuple.getT2();
+              return Gateway.getGateway(gatewayClass).start(config);
+            })
+            .then(Mono.just(this)));
   }
 
   public Metrics metrics() {
@@ -175,6 +189,7 @@ public class Microservices {
     private ServiceDiscovery discovery = ServiceDiscovery.getDiscovery();
     private DiscoveryConfig.Builder discoveryConfig = DiscoveryConfig.builder();
     private Map<String, String> tags = new HashMap<>();
+    private List<Tuple2<Class<? extends Gateway>, GatewayConfig>> gateways = new ArrayList<>();
 
     public Mono<Microservices> start() {
       Call call = new Call(client, methodRegistry, serviceRegistry).metrics(this.metrics);
@@ -257,6 +272,15 @@ public class Microservices {
     public Builder tags(Map<String, String> tags) {
       this.tags = tags;
       return this;
+    }
+
+    public Builder gateway(Class<? extends Gateway> gatewayClass, GatewayConfig config) {
+      gateways.add(Tuples.of(gatewayClass, config));
+      return this;
+    }
+
+    public Builder gateway(Class<? extends Gateway> gatewayClass, int port) {
+      return gateway(gatewayClass, GatewayConfig.builder().port(port).build());
     }
   }
 
