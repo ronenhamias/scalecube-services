@@ -15,7 +15,7 @@ public class WebsocketStubGateway implements Gateway {
 
   private static final GatewayConfig defaultConfig = GatewayConfig.builder()
       .port(9090)
-      .addOption(WS_SPECIFIC_OPTION_NAME, 100)
+      .addOption(WS_SPECIFIC_OPTION_NAME, "100")
       .build();
 
   @Override

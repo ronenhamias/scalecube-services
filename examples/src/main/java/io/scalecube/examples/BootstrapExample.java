@@ -25,7 +25,7 @@ public class BootstrapExample {
     Microservices gateway = Microservices.builder()
         .gateway(HttpStubGateway.class, 8181) // override default port
         .gateway(WebsocketStubGateway.class, GatewayConfig.builder()
-            .addOption(WebsocketStubGateway.WS_SPECIFIC_OPTION_NAME, 500) // override default value of specific option
+            .addOption(WebsocketStubGateway.WS_SPECIFIC_OPTION_NAME, "500") // override default value of specific option
             .build())
         .startAwait();
 

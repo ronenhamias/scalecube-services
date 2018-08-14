@@ -10,7 +10,7 @@ import java.util.Optional;
  */
 public final class GatewayConfig {
 
-  private final Map<String, Object> options;
+  private final Map<String, String> options;
 
   private Integer port;
 
@@ -22,19 +22,20 @@ public final class GatewayConfig {
   /**
    * Gateway port.
    * 
-   * @return optional value of port
+   * @return port number
    */
   public Optional<Integer> port() {
     return Optional.ofNullable(port);
   }
 
   /**
-   * Specific configuration for each particular gateway defined as key-value pairs.
-   *
-   * @return map of options
+   * Returns value of configuration property for given key.
+   * 
+   * @param key configuration property name
+   * @return property value
    */
-  public Map<String, Object> options() {
-    return options;
+  public Optional<String> get(String key) {
+    return Optional.ofNullable(options.get(key));
   }
 
   public static Builder builder() {
@@ -51,7 +52,7 @@ public final class GatewayConfig {
 
   public static class Builder {
 
-    private final Map<String, Object> options = new HashMap<>();
+    private final Map<String, String> options = new HashMap<>();
 
     private Integer port;
 
@@ -62,12 +63,12 @@ public final class GatewayConfig {
       return this;
     }
 
-    public Builder addOption(String key, Object value) {
+    public Builder addOption(String key, String value) {
       options.put(key, value);
       return this;
     }
 
-    public Builder addOptions(Map<String, Object> options) {
+    public Builder addOptions(Map<String, String> options) {
       this.options.putAll(options);
       return this;
     }
