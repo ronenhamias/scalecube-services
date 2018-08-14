@@ -1,5 +1,6 @@
 package io.scalecube.services;
 
+import com.codahale.metrics.MetricRegistry;
 import io.scalecube.cluster.membership.IdGenerator;
 import io.scalecube.services.ServiceCall.Call;
 import io.scalecube.services.discovery.ServiceScanner;
@@ -17,9 +18,6 @@ import io.scalecube.services.transport.client.api.ClientTransport;
 import io.scalecube.services.transport.server.api.ServerTransport;
 import io.scalecube.transport.Address;
 import io.scalecube.transport.Addressing;
-
-import com.codahale.metrics.MetricRegistry;
-
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
@@ -108,7 +105,8 @@ public class Microservices {
   private final List<ServiceInfo> services;
   private final String id;
   private final int servicePort;
-  private List<Tuple2<Gateway, GatewayConfig>> gatewayHolders;
+  private final List<Tuple2<Gateway, GatewayConfig>> gatewayHolders;
+  private final Map<Class<? extends Gateway>, Address> gatewayAddresses = new HashMap<>();
 
   private DiscoveryConfig.Builder discoveryConfig; // calculated
   private ServiceDiscovery discovery; // calculated
@@ -162,17 +160,27 @@ public class Microservices {
     }
 
     // configure discovery and publish to the cluster.
-    return discovery.start(discoveryConfig.serviceRegistry(serviceRegistry)
-        .build())
+    return discovery
+        .start(discoveryConfig.serviceRegistry(serviceRegistry).build())
         .map(discovery -> (this.discovery = discovery))
         .then(Mono.just(Reflect.builder(this).inject()))
-        .then(Flux.fromIterable(gatewayHolders)
-            .flatMap(gatewayHolder -> {
-              Gateway gateway = gatewayHolder.getT1();
-              GatewayConfig config = gatewayHolder.getT2();
-              return gateway.start(config);
-            })
-            .then(Mono.just(this)));
+        .then(
+            Flux.fromIterable(gatewayHolders)
+                .flatMap(
+                    gatewayHolder -> {
+                      Gateway gateway = gatewayHolder.getT1();
+                      GatewayConfig config = gatewayHolder.getT2();
+                      return gateway
+                          .start(config)
+                          .doOnSuccess(
+                              inetSocketAddress ->
+                                  gatewayAddresses.put(
+                                      gateway.getClass(),
+                                      Address.create(
+                                          inetSocketAddress.getHostString(),
+                                          inetSocketAddress.getPort())));
+                    })
+                .then(Mono.just(this)));
   }
 
   public Metrics metrics() {
@@ -208,8 +216,7 @@ public class Microservices {
                   ((ServiceInfo) service)
                   : ServiceInfo.fromServiceInstance(service).build()));
 
-      return new Microservices(this)
-          .start();
+      return new Microservices(this).start();
     }
 
     public Microservices startAwait() {
@@ -305,6 +312,14 @@ public class Microservices {
 
   public Call call() {
     return new Call(client, methodRegistry, serviceRegistry).metrics(metrics);
+  }
+
+  public Address gatewayAddress(Class<? extends Gateway> gatewayClass) {
+    return gatewayAddresses.get(gatewayClass);
+  }
+
+  public Map<Class<? extends Gateway>, Address> gatewayAddresses() {
+    return Collections.unmodifiableMap(gatewayAddresses);
   }
 
   public Mono<Void> shutdown() {
