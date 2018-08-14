@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 
+import reactor.core.publisher.Mono;
+
 public class ServicesBenchmarksState extends BenchmarksState<ServicesBenchmarksState> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ServicesBenchmarksState.class);
@@ -34,29 +36,20 @@ public class ServicesBenchmarksState extends BenchmarksState<ServicesBenchmarksS
 
     node = Microservices.builder()
         .metrics(settings.registry())
-        .seeds(seed.cluster().address())
+        .seeds(seed.discovery().address())
         .services(services)
         .startAwait();
 
-    LOGGER.info("Seed address: " + seed.cluster().address() +
+    LOGGER.info("Seed address: " + seed.discovery().address() +
         ", services address: " + node.serviceAddress() +
         ", seed serviceRegistry: " + seed.serviceRegistry().listServiceReferences());
   }
 
   @Override
   public void afterAll() {
-    if (node != null) {
-      try {
-        node.shutdown().block(SHUTDOWN_TIMEOUT);
-      } catch (Throwable ignore) {
-      }
-    }
-
-    if (seed != null) {
-      try {
-        seed.shutdown().block(SHUTDOWN_TIMEOUT);
-      } catch (Throwable ignore) {
-      }
+    try {
+      Mono.when(node.shutdown(), seed.shutdown()).block(SHUTDOWN_TIMEOUT);
+    } catch (Throwable ignore) {
     }
   }
 

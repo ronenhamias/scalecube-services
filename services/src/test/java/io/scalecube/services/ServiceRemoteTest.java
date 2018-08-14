@@ -4,8 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.scalecube.cluster.ClusterConfig;
-import io.scalecube.cluster.ClusterConfig.Builder;
+import io.scalecube.services.discovery.api.DiscoveryConfig;
 import io.scalecube.services.exceptions.InternalServiceException;
 import io.scalecube.services.sut.CoarseGrainedService;
 import io.scalecube.services.sut.CoarseGrainedServiceImpl;
@@ -53,15 +52,17 @@ public class ServiceRemoteTest extends BaseTest {
       provider.shutdown().block();
     } catch (Exception ex) {
     }
-   
+
   }
+
   private static Microservices gateway() {
     return Microservices.builder()
         .startAwait();
   }
+
   private static Microservices serviceProvider() {
     return Microservices.builder()
-        .seeds(gateway.cluster().address())
+        .seeds(gateway.discovery().address())
         .services(new GreetingServiceImpl())
         .startAwait();
   }
@@ -193,7 +194,7 @@ public class ServiceRemoteTest extends BaseTest {
     // Create microservices instance cluster.
     // noinspection unused
     Microservices provider = Microservices.builder()
-        .seeds(gateway.cluster().address())
+        .seeds(gateway.discovery().address())
         .services(new CoarseGrainedServiceImpl()) // add service a and b
         .startAwait();
 
@@ -214,8 +215,8 @@ public class ServiceRemoteTest extends BaseTest {
     // Create microservices instance cluster.
     // noinspection unused
     Microservices provider = Microservices.builder()
-        .seeds(gateway.cluster().address())
-        .services(another) // add service a and b
+        .seeds(gateway.discovery().address())
+        .services(another)
         .startAwait();
 
     // Get a proxy to the service api.
@@ -232,7 +233,7 @@ public class ServiceRemoteTest extends BaseTest {
 
     // Create microservices instance cluster.
     Microservices ms = Microservices.builder()
-        .seeds(gateway.cluster().address())
+        .seeds(gateway.discovery().address())
         .services(another) // add service a and b
         .startAwait();
 
@@ -253,7 +254,7 @@ public class ServiceRemoteTest extends BaseTest {
 
     // Create microservices instance cluster.
     Microservices provider = Microservices.builder()
-        .seeds(gateway.cluster().address())
+        .seeds(gateway.discovery().address())
         .services(another) // add service a and b
         .startAwait();
 
@@ -332,15 +333,37 @@ public class ServiceRemoteTest extends BaseTest {
 
   @Test
   public void test_services_contribute_to_cluster_metadata() {
-    Map<String, String> metadata = new HashMap<>();
-    metadata.put("HOSTNAME", "host1");
-    Builder clusterConfig = ClusterConfig.builder().metadata(metadata);
+    Map<String, String> tags = new HashMap<>();
+    tags.put("HOSTNAME", "host1");
+
     Microservices ms = Microservices.builder()
-        .clusterConfig(clusterConfig)
+        .tags(tags)
         .services(new GreetingServiceImpl())
         .startAwait();
 
-    assertTrue(ms.cluster().member().metadata().containsKey("HOSTNAME"));
+    assertTrue(ms.discovery().endpoint().tags().containsKey("HOSTNAME"));
+  }
+
+  @Test
+  public void test_remote_mono_empty_greeting() {
+    GreetingService service = gateway.call().create()
+        .api(GreetingService.class);
+
+    // call the service.
+    StepVerifier.create(service.greetingMonoEmpty(new GreetingRequest("empty")))
+        .expectComplete()
+        .verify(TIMEOUT);
+  }
+
+  @Test
+  public void test_remote_flux_empty_greeting() {
+    GreetingService service = gateway.call().create()
+        .api(GreetingService.class);
+
+    // call the service.
+    StepVerifier.create(service.greetingFluxEmpty(new GreetingRequest("empty")))
+        .expectComplete()
+        .verify(TIMEOUT);
   }
 
   private GreetingService createProxy() {

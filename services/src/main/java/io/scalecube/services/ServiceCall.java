@@ -2,7 +2,6 @@ package io.scalecube.services;
 
 import static java.util.Objects.requireNonNull;
 
-import io.scalecube.services.api.NullData;
 import io.scalecube.services.api.ServiceMessage;
 import io.scalecube.services.codec.ServiceMessageCodec;
 import io.scalecube.services.exceptions.ExceptionProcessor;
@@ -21,14 +20,14 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
-
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 public class ServiceCall {
 
@@ -130,7 +129,8 @@ public class ServiceCall {
           .invokeOne(request, ServiceMessageCodec::decodeData)
           .onErrorMap(ExceptionProcessor::mapException);
     } else { // remote service.
-      return requestOne(request, responseType, addressLookup(request));
+      return addressLookup(request)
+          .flatMap(address -> requestOne(request, responseType, address));
     }
   }
 
@@ -173,7 +173,8 @@ public class ServiceCall {
           .invokeMany(request, ServiceMessageCodec::decodeData)
           .onErrorMap(ExceptionProcessor::mapException);
     } else { // remote service.
-      return requestMany(request, responseType, addressLookup(request));
+      return addressLookup(request)
+          .flatMapMany(address -> requestMany(request, responseType, address));
     }
   }
 
@@ -220,7 +221,8 @@ public class ServiceCall {
             .invokeBidirectional(messages, ServiceMessageCodec::decodeData)
             .onErrorMap(ExceptionProcessor::mapException);
       } else { // remote service.
-        return requestBidirectional(messages, responseType, addressLookup(request));
+        return addressLookup(request)
+            .flatMapMany(address -> requestBidirectional(messages, responseType, address));
       }
     });
   }
@@ -292,33 +294,27 @@ public class ServiceCall {
         });
   }
 
-  private Address addressLookup(ServiceMessage request) {
-    ServiceReference serviceReference =
-        router.route(serviceRegistry, request)
-            .orElseThrow(() -> noReachableMemberException(request));
-
-    return Address.create(serviceReference.host(), serviceReference.port());
+  private Mono<Address> addressLookup(ServiceMessage request) {
+    return router.route(serviceRegistry, request)
+        .map(serviceReference -> Mono.just(serviceReference.address()))
+        .orElseGet(() -> Mono.error(noReachableMemberException(request)));
   }
 
   private static ServiceMessage toServiceMessage(MethodInfo methodInfo, Object... params) {
     return ServiceMessage.builder()
         .qualifier(methodInfo.serviceName(), methodInfo.methodName())
-        .data(methodInfo.parameterCount() != 0 ? params[0] : NullData.NULL_DATA)
+        .data(methodInfo.parameterCount() != 0 ? params[0] : null)
         .build();
   }
 
   private static Function<? super Flux<ServiceMessage>, ? extends Publisher<ServiceMessage>> asFlux(
       boolean isRequestTypeServiceMessage) {
-    return flux -> isRequestTypeServiceMessage
-        ? flux
-        : flux.map(ServiceMessage::data);
+    return flux -> isRequestTypeServiceMessage ? flux : flux.filter(ServiceMessage::hasData).map(ServiceMessage::data);
   }
 
   private static Function<? super Mono<ServiceMessage>, ? extends Publisher<ServiceMessage>> asMono(
       boolean isRequestTypeServiceMessage) {
-    return mono -> isRequestTypeServiceMessage
-        ? mono
-        : mono.map(ServiceMessage::data);
+    return mono -> isRequestTypeServiceMessage ? mono : mono.filter(ServiceMessage::hasData).map(ServiceMessage::data);
   }
 
   private static ServiceUnavailableException noReachableMemberException(ServiceMessage request) {

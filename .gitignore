@@ -23,12 +23,12 @@
 # Report directories
 /reports
 */reports
+*.csv
+*.log
+*.zip
 
 # Mac-specific directory that no other operating system needs.
 .DS_Store
 
 # JVM crash logs
 hs_err_pid*.log
-
-*.log
-*.csv

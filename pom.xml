@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <groupId>io.scalecube</groupId>
   <artifactId>scalecube-services-parent</artifactId>
-  <version>2.0.26-SNAPSHOT</version>
+  <version>2.1.12-SNAPSHOT</version>
 
   <packaging>pom</packaging>
 
@@ -56,18 +56,17 @@
   </distributionManagement>
 
   <properties>
-    <jackson.version>2.9.0</jackson.version>
-    <scalecube.version>1.0.9</scalecube.version>
-    <scalecube-benchmarks.version>1.1.0</scalecube-benchmarks.version>
-    <reactor.version>3.1.6.RELEASE</reactor.version>
-    <rxjava.version>1.3.8</rxjava.version>
+    <jackson.version>2.9.6</jackson.version>
+    <scalecube-cluster.version>2.0.0</scalecube-cluster.version>
+    <scalecube-benchmarks.version>1.1.14</scalecube-benchmarks.version>
+    <reactor.version>3.1.8.RELEASE</reactor.version>
     <metrics.version>3.1.2</metrics.version>
-    <rsocket.version>0.11.3</rsocket.version>
+    <rsocket.version>0.11.5</rsocket.version>
     <reactor-netty.version>0.7.8.RELEASE</reactor-netty.version>
     <protostuff.version>1.6.0</protostuff.version>
     <netty.version>4.1.25.Final</netty.version>
     <slf4j.version>1.7.7</slf4j.version>
-    <log4j.version>2.6.2</log4j.version>
+    <log4j.version>2.8.2</log4j.version>
     <jsr305.version>3.0.2</jsr305.version>
     <jctools.version>2.1.2</jctools.version>
     <junit.jupiter.version>5.2.0</junit.jupiter.version>
@@ -92,8 +91,10 @@
     <module>services-api</module>
     <module>rsocket-transport</module>
     <module>services-transport</module>
+    <module>services-discovery</module>
     <module>services-codec</module>
     <module>services-codec-jackson</module>
+    <module>services-codec-protostuff</module>
     <module>services</module>
     <module>benchmarks</module>
     <module>examples</module>
@@ -102,16 +103,10 @@
 
   <dependencyManagement>
     <dependencies>
-      <!-- Scalecube deps -->
-      <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>scalecube-cluster</artifactId>
-        <version>${scalecube.version}</version>
-      </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>scalecube-utils</artifactId>
-        <version>${scalecube.version}</version>
+        <version>${scalecube-cluster.version}</version>
       </dependency>
 
       <dependency>
@@ -171,6 +166,28 @@
         <version>${jackson.version}</version>
       </dependency>
 
+      <!-- Protostuff/Protobuf -->
+      <dependency>
+        <groupId>io.protostuff</groupId>
+        <artifactId>protostuff-api</artifactId>
+        <version>${protostuff.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.protostuff</groupId>
+        <artifactId>protostuff-core</artifactId>
+        <version>${protostuff.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.protostuff</groupId>
+        <artifactId>protostuff-collectionschema</artifactId>
+        <version>${protostuff.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.protostuff</groupId>
+        <artifactId>protostuff-runtime</artifactId>
+        <version>${protostuff.version}</version>
+      </dependency>
+
       <!-- Netty -->
       <dependency>
         <groupId>io.netty</groupId>
@@ -221,14 +238,14 @@
         <version>${scalecube-benchmarks.version}</version>
       </dependency>
       <dependency>
+        <groupId>io.scalecube</groupId>
+        <artifactId>scalecube-benchmarks-log4j2</artifactId>
+        <version>${scalecube-benchmarks.version}</version>
+      </dependency>
+      <dependency>
         <groupId>io.dropwizard.metrics</groupId>
         <artifactId>metrics-core</artifactId>
         <version>${metrics.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.reactivex</groupId>
-        <artifactId>rxjava</artifactId>
-        <version>${rxjava.version}</version>
       </dependency>
       <dependency>
         <groupId>org.jctools</groupId>
@@ -266,21 +283,6 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
-
-  <dependencies>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j-impl</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-core</artifactId>
-    </dependency>
-  </dependencies>
 
   <build>
     <pluginManagement>
@@ -357,7 +359,7 @@
                   <message>The reactor is not valid</message>
                   <ignoreModuleDependencies>true</ignoreModuleDependencies>
                 </reactorModuleConvergence>
-                <dependencyConvergence/>
+                <dependencyConvergence />
               </rules>
               <fail>true</fail>
             </configuration>
@@ -380,6 +382,7 @@
       </plugin>
     </plugins>
   </build>
+
   <repositories>
     <repository>
       <snapshots>
@@ -393,9 +396,17 @@
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
-      <id>central</id>
+      <id>bintray</id>
       <name>bintray</name>
       <url>http://jcenter.bintray.com</url>
+    </repository>
+    <repository>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <id>central</id>
+      <name>central</name>
+      <url>http://repo1.maven.org</url>
     </repository>
   </repositories>
 

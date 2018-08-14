@@ -56,11 +56,12 @@ public class ServiceCallRemoteTest extends BaseTest {
       provider.shutdown().block();
     } catch (Exception ex) {
     }
-   
+
   }
 
   private static Microservices serviceProvider() {
-    return Microservices.builder().seeds(gateway.cluster().address())
+    return Microservices.builder()
+        .seeds(gateway.discovery().address())
         .services(new GreetingServiceImpl())
         .startAwait();
   }
@@ -82,11 +83,11 @@ public class ServiceCallRemoteTest extends BaseTest {
   }
 
   @Test
-  public void test_remote_void_greeting() throws Exception {
-
+  public void test_remote_void_greeting() {
     // When
-    gateway.call().create().oneWay(GREETING_VOID_REQ).block(Duration.ofSeconds(TIMEOUT));
-
+    StepVerifier.create(gateway.call().create().oneWay(GREETING_VOID_REQ))
+        .expectComplete()
+        .verify(timeout);
   }
 
   @Test

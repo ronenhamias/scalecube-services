@@ -5,6 +5,8 @@ import io.scalecube.services.ServiceReference;
 import io.scalecube.services.registry.api.ServiceRegistry;
 
 import org.jctools.maps.NonBlockingHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,6 +19,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ServiceRegistryImpl implements ServiceRegistry {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(ServiceRegistryImpl.class);
 
   // todo how to remove it (tags problem)?
   private final Map<String, ServiceEndpoint> serviceEndpoints = new NonBlockingHashMap<>();
@@ -57,13 +61,14 @@ public class ServiceRegistryImpl implements ServiceRegistry {
   public boolean registerService(ServiceEndpoint serviceEndpoint) {
     boolean success = serviceEndpoints.putIfAbsent(serviceEndpoint.id(), serviceEndpoint) == null;
     if (success) {
-      serviceEndpoint.serviceRegistrations().stream().flatMap(
-          sr -> sr.methods().stream().map(
-              sm -> new ServiceReference(sm, sr, serviceEndpoint)))
-          .forEach(
-              reference -> referencesByQualifier
-                  .computeIfAbsent(reference.qualifier(), k -> new CopyOnWriteArrayList<>())
-                  .add(reference));
+      serviceEndpoint
+          .serviceRegistrations()
+          .stream()
+          .flatMap(serviceRegistration -> serviceRegistration.methods().stream()
+              .map(sm -> new ServiceReference(sm, serviceRegistration, serviceEndpoint)))
+          .forEach(serviceReference -> referencesByQualifier
+              .computeIfAbsent(serviceReference.qualifier(), key -> new CopyOnWriteArrayList<>())
+              .add(serviceReference));
     }
     return success;
   }
@@ -77,7 +82,7 @@ public class ServiceRegistryImpl implements ServiceRegistry {
     return serviceEndpoint;
   }
 
-  private Stream<ServiceReference> serviceReferenceStream() {
+  Stream<ServiceReference> serviceReferenceStream() {
     return referencesByQualifier.values().stream().flatMap(Collection::stream);
   }
 }

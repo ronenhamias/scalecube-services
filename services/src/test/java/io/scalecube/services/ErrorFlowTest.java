@@ -16,6 +16,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 
+import reactor.test.StepVerifier;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ErrorFlowTest {
@@ -33,7 +35,7 @@ public class ErrorFlowTest {
         .startAwait();
     consumer = Microservices.builder()
         .discoveryPort(port.incrementAndGet())
-        .seeds(provider.cluster().address())
+        .seeds(provider.discovery().address())
         .startAwait();
   }
 
@@ -66,7 +68,8 @@ public class ErrorFlowTest {
 
   @Test
   public void testServiceUnavailable() {
-    assertThrows(ServiceUnavailableException.class, () ->
-            consumer.call().create().requestOne(TestRequests.NOT_FOUND_REQ));
+    StepVerifier.create(consumer.call().create().requestOne(TestRequests.NOT_FOUND_REQ))
+        .expectError(ServiceUnavailableException.class)
+        .verify();
   }
 }

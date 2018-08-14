@@ -1,11 +1,11 @@
 package io.scalecube.services.sut;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 public class SimpleQuoteService implements QuoteService {
 
@@ -41,5 +41,10 @@ public class SimpleQuoteService implements QuoteService {
   @Override
   public Flux<String> justManyNever() {
     return Flux.never();
+  }
+
+  @Override
+  public Flux<String> onlyOneAndThenNever() {
+    return Flux.merge(Mono.just("only first"), Mono.never());
   }
 }
