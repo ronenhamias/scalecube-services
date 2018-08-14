@@ -1,3 +1,16 @@
+/*
+ * Copyright 2014-2018 Real Logic Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package io.aeron.samples;
 
 import io.aeron.*;
@@ -13,14 +26,15 @@ import org.agrona.concurrent.BusySpinIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.console.ContinueBarrier;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Ping component of Ping-Pong latency test.
+ * Ping component of Ping-Pong latency test recorded to a histogram to capture full distribution..
  * <p>
- * Initiates and records times.
+ * Initiates messages sent to {@link Pong} and records times.
+ * 
+ * @see Pong
  */
 public class Ping {
   private static final int PING_STREAM_ID = SampleConfiguration.PING_STREAM_ID;
@@ -34,14 +48,14 @@ public class Ping {
   private static final String PING_CHANNEL = SampleConfiguration.PING_CHANNEL;
   private static final String PONG_CHANNEL = SampleConfiguration.PONG_CHANNEL;
 
-  private static final UnsafeBuffer ATOMIC_BUFFER = new UnsafeBuffer(
-      BufferUtil.allocateDirectAligned(MESSAGE_LENGTH, BitUtil.CACHE_LINE_LENGTH));
+  private static final UnsafeBuffer ATOMIC_BUFFER =
+      new UnsafeBuffer(BufferUtil.allocateDirectAligned(MESSAGE_LENGTH, BitUtil.CACHE_LINE_LENGTH));
   private static final Histogram HISTOGRAM = new Histogram(TimeUnit.SECONDS.toNanos(10), 3);
   private static final CountDownLatch LATCH = new CountDownLatch(1);
   private static final IdleStrategy POLLING_IDLE_STRATEGY = new BusySpinIdleStrategy();
 
   public static void main(final String[] args) throws Exception {
-    final MediaDriver driver = EMBEDDED_MEDIA_DRIVER ? MediaDriver.launchEmbedded() : null;
+    final MediaDriver driver = MediaDriver.launchEmbedded();
     final Aeron.Context ctx = new Aeron.Context().availableImageHandler(Ping::availablePongImageHandler);
     final FragmentHandler fragmentHandler = new FragmentAssembler(Ping::pongHandler);
 
@@ -55,8 +69,7 @@ public class Ping {
 
     try (Aeron aeron = Aeron.connect(ctx)) {
       System.out.println(
-          "Warming up... " + WARMUP_NUMBER_OF_ITERATIONS +
-              " iterations of " + WARMUP_NUMBER_OF_MESSAGES + " messages");
+          "Warming up... " + WARMUP_NUMBER_OF_ITERATIONS + " iterations of " + WARMUP_NUMBER_OF_MESSAGES + " messages");
 
       try (Publication publication = aeron.addPublication(PING_CHANNEL, PING_STREAM_ID);
           Subscription subscription = aeron.addSubscription(PONG_CHANNEL, PONG_STREAM_ID)) {
@@ -84,11 +97,8 @@ public class Ping {
     CloseHelper.quietClose(driver);
   }
 
-  private static void roundTripMessages(
-      final FragmentHandler fragmentHandler,
-      final Publication publication,
-      final Subscription subscription,
-      final long count) {
+  private static void roundTripMessages(final FragmentHandler fragmentHandler, final Publication publication,
+      final Subscription subscription, final long count) {
     while (!subscription.isConnected()) {
       Thread.yield();
     }
@@ -121,9 +131,8 @@ public class Ping {
 
   private static void availablePongImageHandler(final Image image) {
     final Subscription subscription = image.subscription();
-    System.out.format(
-        "Available image: channel=%s streamId=%d session=%d%n",
-        subscription.channel(), subscription.streamId(), image.sessionId());
+    System.out.format("Available image: channel=%s streamId=%d session=%d%n", subscription.channel(),
+        subscription.streamId(), image.sessionId());
 
     if (PONG_STREAM_ID == subscription.streamId() && PONG_CHANNEL.equals(subscription.channel())) {
       LATCH.countDown();
