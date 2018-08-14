@@ -98,6 +98,7 @@
     <module>services</module>
     <module>benchmarks</module>
     <module>examples</module>
+    <module>aeron-services-transport</module>
   </modules>
 
   <dependencyManagement>
