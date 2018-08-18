@@ -386,6 +386,11 @@ public class Microservices {
     return this.discovery;
   }
 
+  /**
+   * Shutdown instance and clear resources.
+   *
+   * @return result of shutdown
+   */
   public Mono<Void> shutdown() {
     return Mono.defer(
         () ->
